@@ -229,10 +229,10 @@ pytest>=7.0.0
 
 | Name | Role |
 |---|---|
-| **Loki** | Hardware Integration & RFID Interface |
-| **JB** | Python Backend & Database Design |
-| **Jaden** | GUI Design & Frontend Development |
-| **Aidan** | Alert System & Configuration Logic |
+| **Loki** | Alert System & Configuration Logic |
+| **JB** | Hardware Integration & RFID Interface |
+| **Jaden** | GUI Design & Database Design |
+| **Aidan** | Python Backend & GUI Design |
 
 *CSC-132 — Freshman Design Expo*
 
@@ -240,12 +240,12 @@ pytest>=7.0.0
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
 
-*Built with 💸 by Cache Money*
+*Built with ♥️ from the Cache Money group*
 
 </div>
