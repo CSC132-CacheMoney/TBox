@@ -1,0 +1,13 @@
+{
+  "rfid": {
+    "port": "/dev/ttyUSB0",
+    "baud_rate": 9600
+  },
+  "alerts": {
+    "checkout_limit_minutes": 60,
+    "alert_method": "console"
+  },
+  "database": {
+    "path": "data/tools.db"
+  }
+}
