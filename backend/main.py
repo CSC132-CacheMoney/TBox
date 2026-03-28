@@ -20,10 +20,12 @@ else:
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form.get("username")
+        username = (request.form.get("username")).lower().strip().capitalize()
         # Validation: 2–10 characters (matches your design's validation config)
         if username and 2 <= len(username) <= 10:
             session["user"] = username
+            database.register_user(username)# Add user to DB if not exists
+            print(f"User '{username}' checked in.")
             return redirect(url_for("dashboard"))
     return render_template("login.html")
 

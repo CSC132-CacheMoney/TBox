@@ -114,3 +114,36 @@ def checkout_tool(rfid_tag, user_name):
     
     conn.commit()
     conn.close()
+    
+def return_tool(rfid_tag):
+    """Return a checked-out tool."""
+    conn = get_connection()
+    tool = conn.execute("SELECT * FROM tools WHERE rfid_tag = ?", (rfid_tag,)).fetchone()
+    if not tool:
+        raise ValueError("Tool not found.")
+    if tool["status"] != "Checked Out":
+        raise ValueError("Tool is not currently checked out.")
+    
+    # Mark tool as available
+    conn.execute("""
+        UPDATE tools SET status = 'Available' WHERE rfid_tag = ?
+    """, (rfid_tag,))
+    
+    # Record the return time for the latest checkout of this tool
+    conn.execute("""
+        UPDATE checkouts SET returned_at = ?
+        WHERE tool_id = ? AND returned_at IS NULL
+    """, (datetime.now().isoformat(), tool["id"]))
+    
+    conn.commit()
+    conn.close()
+    
+def register_user(name):
+    """Add a new user or update last seen time if they already exist."""
+    conn = get_connection()
+    conn.execute("""
+        INSERT INTO users (name, last_seen) VALUES (?, ?)
+        ON CONFLICT(name) DO UPDATE SET last_seen = excluded.last_seen
+    """, (name, datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
