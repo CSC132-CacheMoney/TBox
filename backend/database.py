@@ -1,5 +1,7 @@
+import os
 import sqlite3
 from datetime import datetime
+
 
 DB_PATH = "data/tools.db"
 
@@ -12,6 +14,7 @@ def get_connection():
 # ── INITIALIZATION ────────────────────────────────────────────────────────────
 
 def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True) # Ensure the data directory exists
     """Create all tables if they don't exist. Run once on startup."""
     conn = get_connection()
     c = conn.cursor()

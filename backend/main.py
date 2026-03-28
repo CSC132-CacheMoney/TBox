@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, session
 import database  # your db module
 
@@ -5,9 +6,15 @@ import database  # your db module
 
 app = Flask(__name__, template_folder="../GUI/templates", static_folder="../GUI")
 app.secret_key = "your_secret_key"
-if not app.config.get("DATABASE_PATH"):
-    app.config["DATABASE_PATH"] = "data/tools.db"  # default path if not
-    database.init_db() # Prevent re-initialization on subsequent runs
+
+if not os.path.exists("../TBox/data"):
+    database.init_db()  # Ensure DB is initialized on startup
+    print("Database initialized.")
+    print (os.path.exists("../TBox/data"), os.path.abspath("../TBox/data"))
+    
+else:
+    print ("Database already exists. Skipping initialization.")
+    print (os.path.exists("../TBox/data"), os.path.abspath("../TBox/data"))
 
 # LOGIN — matches s10000 (Login screen)
 @app.route("/", methods=["GET", "POST"])
