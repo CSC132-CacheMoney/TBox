@@ -4,10 +4,11 @@
     "baud_rate": 9600
   },
   "alerts": {
-    "checkout_limit_minutes": 60,
+    "checkout_limit_hours": 24,
     "alert_method": "console"
   },
   "database": {
     "path": "data/tools.db"
-  }
+  },
+  "db_flag": true
 }

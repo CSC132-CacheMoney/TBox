@@ -51,7 +51,7 @@ def init_db():
     # Insert default config values if they don't exist yet
     c.execute("""
         INSERT OR IGNORE INTO config (key, value) VALUES
-            ('checkout_limit_minutes', '60'),
+            ('checkout_limit_hours', '24'),
             ('alert_method', 'console')
     """)
 
@@ -72,3 +72,42 @@ def register_tool(name, rfid_tag, category="General", condition="Good"):
         conn.commit()
     except sqlite3.IntegrityError:
         raise ValueError(f"A tool with RFID tag '{rfid_tag}' already exists.")
+    
+def get_all_tools():
+    """Return a list of all tools in the inventory."""
+    conn = get_connection()
+    tools = conn.execute("SELECT * FROM tools").fetchall()
+    conn.close()
+    return tools
+
+def retire_tool(rfid_tag):
+    """Mark a tool as retired."""
+    conn = get_connection()
+    conn.execute("""
+        UPDATE tools SET status = 'Retired' WHERE rfid_tag = ?
+    """, (rfid_tag,))
+    conn.commit()
+    conn.close()
+    
+def checkout_tool(rfid_tag, user_name):
+    """Check out a tool to a user."""
+    conn = get_connection()
+    tool = conn.execute("SELECT * FROM tools WHERE rfid_tag = ?", (rfid_tag,)).fetchone()
+    if not tool:
+        raise ValueError("Tool not found.")
+    if tool["status"] != "Available":
+        raise ValueError("Tool is not available for checkout.")
+    
+    # Mark tool as checked out
+    conn.execute("""
+        UPDATE tools SET status = 'Checked Out' WHERE rfid_tag = ?
+    """, (rfid_tag,))
+    
+    # Record the checkout
+    conn.execute("""
+        INSERT INTO checkouts (tool_id, user_name, checked_out_at)
+        VALUES (?, ?, ?)
+    """, (tool["id"], user_name, datetime.now().isoformat()))
+    
+    conn.commit()
+    conn.close()

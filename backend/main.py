@@ -1,9 +1,16 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import database  # your db module
+import json
+
+# Load configuration from JSON file
+with open("config/settings.json") as f:
+    config = json.load(f)
 
 app = Flask(__name__, template_folder="../GUI/templates", static_folder="../GUI")
 app.secret_key = "your_secret_key"
-
+if config.get("db_flag", True):
+    database.init_db()
+    config["db_flag"] = False  # Prevent re-initialization on subsequent runs
 
 # LOGIN — matches s10000 (Login screen)
 @app.route("/", methods=["GET", "POST"])
