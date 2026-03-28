@@ -9,6 +9,5 @@
   },
   "database": {
     "path": "data/tools.db"
-  },
-  "db_flag": true
+  }
 }
