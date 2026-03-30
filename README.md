@@ -229,10 +229,10 @@ pytest>=7.0.0
 
 | Name | Role |
 |---|---|
-| **Loki** | Hardware Integration & RFID Interface |
-| **JB** | Python Backend & Database Design |
-| **Jaden** | GUI Design & Frontend Development |
-| **Aidan** | Alert System & Configuration Logic |
+| **Loki** | Alerts & RFID Interface |
+| **JB** | GUI Design & Hardware |
+| **Jaden** | Bug Testing & Hardware |
+| **Aidan** | Lead Developer |
 
 *CSC-132 — Freshman Design Expo*
 

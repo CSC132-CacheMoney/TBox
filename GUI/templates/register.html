@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TBox — Vault Registration</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Serif+Display&display=swap');
+
+    :root {
+      --bg:      #1a1a1a;
+      --surface: #1d1d1d;
+      --text:    #f0f0f0;
+      --subtext: #888;
+      --salmon:  #e87070;
+      --input-bg: #f5f5f5;
+      --input-text: #111;
+      --radius-pill: 999px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 28px,
+          rgba(255,255,255,0.018) 28px, rgba(255,255,255,0.018) 29px),
+        repeating-linear-gradient(90deg, transparent, transparent 28px,
+          rgba(255,255,255,0.018) 28px, rgba(255,255,255,0.018) 29px);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      margin: 20px 32px 12px;
+      background: var(--surface);
+      border-radius: var(--radius-pill);
+      height: 72px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      text-decoration: none;
+      color: #fff;
+      z-index: 1;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: #ed7676; }
+    .back-btn svg { width: 28px; height: 28px; fill: currentColor; }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(24px, 3.2vw, 40px);
+      font-weight: 700;
+      color: var(--salmon);
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* ── FORM ── */
+    .form-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 32px 120px;
+      gap: 36px;
+      flex: 1;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .field label {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    /* shared input/select base */
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 13px 18px;
+      border-radius: var(--radius-pill);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      background: var(--input-bg);
+      color: var(--input-text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .field input::placeholder { color: #aaa; }
+    .field input:focus,
+    .field select:focus {
+      border-color: rgba(255,255,255,0.22);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
+    }
+    .field input.error {
+      background: #fdecea;
+      border-color: #c0392b;
+    }
+
+    /* dropdown arrow */
+    .select-wrap {
+      position: relative;
+    }
+    .select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid #666;
+      pointer-events: none;
+    }
+
+    /* ── SUBMIT BUTTON ── */
+    .btn-register {
+      width: 100%;
+      max-width: 480px;
+      padding: 15px 0;
+      border-radius: var(--radius-pill);
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      color: #ddd;
+      background: linear-gradient(180deg, #b00000 0%, #8b0000 100%);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      margin-top: 4px;
+    }
+    .btn-register:hover {
+      background: linear-gradient(180deg, #c00000 0%, #9a0000 100%);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .btn-register:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+
+    /* ── ERROR / SUCCESS ── */
+    .msg {
+      width: 100%;
+      max-width: 480px;
+      font-size: 13px;
+      text-align: center;
+      display: none;
+    }
+    .msg.error   { color: #e74c3c; display: block; }
+    .msg.success { color: #4caf50; display: block; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/dashboard" class="back-btn">
+      <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    </a>
+    <h1>Vault Registration</h1>
+  </header>
+
+  <div class="form-body">
+
+    <!-- Flask renders flash messages here -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <p class="msg {{ category }}">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST" action="/register" id="reg-form"
+          style="display:contents" onsubmit="return validate()">
+
+      <!-- Tool Name -->
+      <div class="field">
+        <label for="tool-name">Tool Name</label>
+        <input
+          type="text"
+          id="tool-name"
+          name="tool_name"
+          placeholder="Name..."
+          required
+          autocomplete="off"
+        />
+      </div>
+
+      <!-- Tool Condition -->
+      <div class="field">
+        <label for="tool-condition">Tool Condition</label>
+        <div class="select-wrap">
+          <select id="tool-condition" name="condition">
+            <option value="New">New</option>
+            <option value="Good">Good</option>
+            <option value="Fair">Fair</option>
+            <option value="Poor">Poor</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tool Category -->
+      <div class="field">
+        <label for="tool-category">Tool Category</label>
+        <div class="select-wrap">
+          <select id="tool-category" name="category">
+            <option value="Hand Tool">Hand Tool</option>
+            <option value="Power Tool">Power Tool</option>
+            <option value="Measuring">Measuring</option>
+            <option value="Cutting">Cutting</option>
+            <option value="Fastening">Fastening</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Detection">Detection</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="msg" id="form-error"></p>
+
+      <button type="submit" class="btn-register">Register Tool</button>
+
+    </form>
+
+  </div>
+
+  <script>
+    function validate() {
+      const name = document.getElementById("tool-name");
+      const errEl = document.getElementById("form-error");
+
+      if (!name.value.trim()) {
+        name.classList.add("error");
+        errEl.textContent = "Please enter a tool name.";
+        errEl.className = "msg error";
+        return false;
+      }
+
+      name.classList.remove("error");
+      errEl.className = "msg";
+      return true;
+    }
+
+    document.getElementById("tool-name").addEventListener("input", function () {
+      this.classList.remove("error");
+      document.getElementById("form-error").className = "msg";
+    });
+  </script>
+
+</body>
+</html>

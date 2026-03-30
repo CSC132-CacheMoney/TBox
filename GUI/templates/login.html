@@ -1,24 +1,215 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>TBox - Login</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TBox — Login</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Serif+Display&display=swap');
+
+    :root {
+      --bg:        #1a1a1a;
+      --surface:   #202020;
+      --text:      #f0f0f0;
+      --subtext:   #888888;
+      --input-bg:  #f9f9f9;
+      --btn-red:   #8b0000;
+      --btn-red-hover: #a00000;
+      --btn-red-top: #b00000;
+      --radius-pill: 999px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      /* subtle crosshatch texture matching the screenshot */
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 28px,
+          rgba(255,255,255,0.018) 28px,
+          rgba(255,255,255,0.018) 29px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 28px,
+          rgba(255,255,255,0.018) 28px,
+          rgba(255,255,255,0.018) 29px
+        );
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── TITLE ── */
+    .brand {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(64px, 10vw, 110px);
+      font-weight: 400;
+      letter-spacing: -1px;
+      color: var(--text);
+      margin-top: 60px;
+      text-align: center;
+    }
+
+    /* ── FORM CARD ── */
+    .login-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      margin-top: 160px;
+      width: 100%;
+      max-width: 420px;
+      padding: 0 24px;
+    }
+
+    .prompt-title {
+      font-size: 28px;
+      font-weight: 400;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .prompt-sub {
+      font-size: 14px;
+      font-weight: 300;
+      color: var(--subtext);
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    /* ── INPUT ── */
+    .text-input {
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: var(--radius-pill);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      background: var(--input-bg);
+      color: #111;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 28px;
+    }
+    .text-input::placeholder { color: #aaa; }
+    .text-input:focus {
+      border-color: rgba(255,255,255,0.25);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
+    }
+    .text-input.error {
+      background: #fdecea;
+      border-color: #c0392b;
+      color: #c0392b;
+    }
+
+    /* ── BUTTON — matches screenshot exactly ── */
+    .btn-checkin {
+      width: 100%;
+      padding: 15px 0;
+      border-radius: var(--radius-pill);
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      color: #ddd;
+
+      /* deep crimson with subtle top highlight matching screenshot */
+      background: linear-gradient(
+        180deg,
+        var(--btn-red-top) 0%,
+        var(--btn-red)     100%
+      );
+      box-shadow:
+        0 2px 8px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    }
+    .btn-checkin:hover {
+      background: linear-gradient(
+        180deg,
+        #c00000 0%,
+        #9a0000 100%
+      );
+      box-shadow:
+        0 4px 14px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .btn-checkin:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+
+    /* ── ERROR MESSAGE ── */
+    .error-msg {
+      color: #e74c3c;
+      font-size: 13px;
+      margin-top: -20px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+  </style>
 </head>
-<body class="screen">
+<body>
+
   <h1 class="brand">TBox</h1>
-  <h2>Please enter your name</h2>
-  <p>This name will be used for tool checkout records</p>
-  <form method="POST">
-    <input
-      type="text"
-      name="username"
-      placeholder="John Doe"
-      minlength="2"
-      maxlength="10"
-      required
-      class="text-input"
-    />
-    <button type="submit" class="btn-primary">Check In</button>
-  </form>
+
+  <div class="login-card">
+    <p class="prompt-title">Please enter your name</p>
+    <p class="prompt-sub">This name will be used for tool checkout records</p>
+
+    <form method="POST" action="/" onsubmit="return validate(event)">
+      <input
+        type="text"
+        name="username"
+        id="username"
+        class="text-input"
+        placeholder="John Doe"
+        minlength="2"
+        maxlength="10"
+        autocomplete="off"
+        required
+      />
+      <p class="error-msg" id="error-msg">Name must be between 2 and 10 characters.</p>
+      <button type="submit" class="btn-checkin">Check In</button>
+    </form>
+  </div>
+
+  <script>
+    function validate(e) {
+      const input = document.getElementById('username');
+      const errorMsg = document.getElementById('error-msg');
+      const val = input.value.trim();
+
+      if (val.length < 2 || val.length > 10) {
+        e.preventDefault();
+        input.classList.add('error');
+        errorMsg.classList.add('visible');
+        return false;
+      }
+      input.classList.remove('error');
+      errorMsg.classList.remove('visible');
+      return true;
+    }
+
+    document.getElementById('username').addEventListener('input', function() {
+      this.classList.remove('error');
+      document.getElementById('error-msg').classList.remove('visible');
+    });
+  </script>
+
 </body>
 </html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TBox — Vault Inventory</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Serif+Display&display=swap');
+
+    :root {
+      --bg:           #1a1a1a;
+      --text:         #f0f0f0;
+      --subtext:      #888;
+      --salmon:       #e87070;
+      --pill-bg:      #2a2a2a;
+      --pill-border:  rgba(255,255,255,0.08);
+      --pill-hover:   #333;
+      --selected-bg:  #3a1a1a;
+      --selected-border: #e87070;
+      --check-green:  #4caf50;
+      --radius-pill:  999px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 28px,
+          rgba(255,255,255,0.018) 28px, rgba(255,255,255,0.018) 29px),
+        repeating-linear-gradient(90deg, transparent, transparent 28px,
+          rgba(255,255,255,0.018) 28px, rgba(255,255,255,0.018) 29px);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      margin: 20px 32px 12px;
+      background: #1d1d1d;
+      border-radius: 999px;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      text-decoration: none;
+      transition: color 0.2s;
+      color: #fff;
+      z-index: 1;
+    }
+    .back-btn:hover { color: #ed7676; }
+    .back-btn svg { width: 28px; height: 28px; fill: currentColor; }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(26px, 3.5vw, 42px);
+      font-weight: 700;
+      color: var(--salmon);
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* ── TOOL LIST ── */
+    .tool-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px 32px 100px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* ── PILL BUTTON ── */
+    .tool-pill {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 24px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(255,255,255,0.07);
+      background: #1d1d1d;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      user-select: none;
+      width: 100%;
+    }
+    .tool-pill:hover {
+      background: #252525;
+      border-color: rgba(255,255,255,0.14);
+    }
+    .tool-pill:active { transform: scale(0.995); }
+
+    /* Selected state */
+    .tool-pill.selected {
+      background: #2e1616;
+      border-color: var(--salmon);
+    }
+
+    /* Dot indicator */
+    .pill-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .pill-dot.available { background: #4caf50; }
+    .pill-dot.checked-out { background: var(--salmon); }
+    .pill-dot.retired { background: #444; }
+
+    .pill-label {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .pill-category {
+      font-size: 12px;
+      color: #555;
+      margin-right: 12px;
+    }
+
+    .pill-status {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .pill-status.available   { background: rgba(76,175,80,0.12);  color: #4caf50; }
+    .pill-status.checked-out { background: rgba(232,112,112,0.12); color: var(--salmon); }
+    .pill-status.retired     { background: rgba(255,255,255,0.05); color: #555; }
+
+    /* checkmark shown when selected */
+    .pill-check {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .tool-pill.selected .pill-check { opacity: 1; }
+    .pill-check svg { width: 18px; height: 18px; }
+
+    /* ── SELECTION FOOTER ── */
+    .selection-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #111;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .selection-info {
+      font-size: 13px;
+      color: var(--subtext);
+    }
+    .selection-info span {
+      color: var(--salmon);
+      font-weight: 500;
+    }
+
+    .selected-ids {
+      font-size: 12px;
+      color: #555;
+      font-family: monospace;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .clear-btn {
+      padding: 8px 20px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      background: transparent;
+      color: var(--subtext);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .clear-btn:hover { border-color: var(--salmon); color: var(--salmon); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/dashboard" class="back-btn">
+      <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    </a>
+    <h1>Vault Inventory</h1>
+  </header>
+
+  <div class="tool-list" id="tool-list">
+
+    {# ── Flask/Jinja2 template loop (active when served by Flask) ── #}
+    {% for tool in tools %}
+    {% set sc = tool.status | lower | replace(' ', '-') %}
+    <div class="tool-pill" data-id="{{ tool.id }}" onclick="toggleTool(this)">
+      <div class="pill-dot {{ sc }}"></div>
+      <span class="pill-label">{{ tool.name }}</span>
+      <span class="pill-category">{{ tool.category }}</span>
+      <span class="pill-status {{ sc }}">{{ tool.status }}</span>
+      <div class="pill-check">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#e87070" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+    </div>
+    {% endfor %}
+
+  </div>
+
+  <!-- Demo tools — auto-renders only when not served by Flask -->
+  <script>
+    const demoTools = [
+      { id: 1,  name: "Hammer",          category: "Hand Tools",  status: "Available"   },
+      { id: 2,  name: "Screwdriver Set", category: "Hand Tools",  status: "Checked Out" },
+      { id: 3,  name: "Power Drill",     category: "Power Tools", status: "Available"   },
+      { id: 4,  name: "Tape Measure",    category: "Measuring",   status: "Available"   },
+      { id: 5,  name: "Level",           category: "Measuring",   status: "Available"   },
+      { id: 6,  name: "Wrench Set",      category: "Hand Tools",  status: "Checked Out" },
+      { id: 7,  name: "Utility Knife",   category: "Cutting",     status: "Available"   },
+      { id: 8,  name: "Pliers",          category: "Hand Tools",  status: "Retired"     },
+      { id: 9,  name: "Wire Stripper",   category: "Electrical",  status: "Available"   },
+      { id: 10, name: "Stud Finder",     category: "Detection",   status: "Available"   },
+      { id: 11, name: "Circular Saw",    category: "Power Tools", status: "Available"   },
+      { id: 12, name: "Clamp Set",       category: "Fastening",   status: "Checked Out" },
+    ];
+
+    const list = document.getElementById("tool-list");
+    if (list.children.length === 0) {
+      demoTools.forEach(tool => {
+        const sc = tool.status === "Checked Out" ? "checked-out"
+                 : tool.status === "Retired"     ? "retired"
+                 : "available";
+        list.innerHTML += `
+          <div class="tool-pill" data-id="${tool.id}" onclick="toggleTool(this)">
+            <div class="pill-dot ${sc}"></div>
+            <span class="pill-label">${tool.name}</span>
+            <span class="pill-category">${tool.category}</span>
+            <span class="pill-status ${sc}">${tool.status}</span>
+            <div class="pill-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#e87070" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+          </div>`;
+      });
+    }
+  </script>
+
+  <!-- Selection footer -->
+  <div class="selection-bar">
+    <div class="selection-info"><span id="count">0</span> selected</div>
+    <div class="selected-ids" id="ids-display">—</div>
+    <button class="clear-btn" onclick="clearSelection()">Clear</button>
+  </div>
+
+  <script>
+    let selectedToolIds = [];
+
+    function toggleTool(pill) {
+      const id = parseInt(pill.dataset.id);
+      if (pill.classList.contains("selected")) {
+        pill.classList.remove("selected");
+        selectedToolIds = selectedToolIds.filter(i => i !== id);
+      } else {
+        pill.classList.add("selected");
+        selectedToolIds.push(id);
+      }
+      updateFooter();
+      console.log("selectedToolIds:", selectedToolIds);
+    }
+
+    function clearSelection() {
+      selectedToolIds = [];
+      document.querySelectorAll(".tool-pill.selected")
+              .forEach(p => p.classList.remove("selected"));
+      updateFooter();
+    }
+
+    function updateFooter() {
+      document.getElementById("count").textContent = selectedToolIds.length;
+      document.getElementById("ids-display").textContent =
+        selectedToolIds.length > 0 ? "IDs: [" + selectedToolIds.join(", ") + "]" : "—";
+    }
+  </script>
+
+</body>
+</html>
