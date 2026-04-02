@@ -1,2 +1,4 @@
 flask
 sqlite3
+pyserial
+webbrowser
