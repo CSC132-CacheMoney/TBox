@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-import rfid_reader as reader
+import TBox.backend.pico_Reader as reader
 import database
  
 register_bp = Blueprint("register", __name__)
