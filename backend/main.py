@@ -8,12 +8,14 @@ from register  import register_bp
 from retire  import retire_bp
 import database
 import webbrowser
-#import alerts
+import alerts
 from dotenv import load_dotenv  # Load environment variables from .env file
 
 load_dotenv()  # Load the .env file
 
-
+def alerts():
+    
+    
 def open_browser():
     #Opens the localhost url, you can also acess it from the public url flask provides if you are on the same network.
     webbrowser.open_new("http://localhost:6767")
@@ -48,6 +50,7 @@ if __name__ == "__main__":
     '''
     threading.Thread(target=app.run, kwargs={'debug': False, 'host': "0.0.0.0", 'port': 6767}).start()
     threading.Thread(target=open_browser).start()  # Open the browser after the server starts
+    threading.Thread(target=alerts.start) # Start the alerts system in a separate thread (if implemented)
     print("Browser opened to http://localhost:6767")
     
     
