@@ -7,10 +7,10 @@ login_bp = Blueprint("login", __name__)
 @login_bp.route("/", methods=["GET", "POST"])
 def login():
     """
-    Login screen (s10000).
-    - GET:  Show the login form.
-    - POST: Validate the name (2-10 chars), save to session, log the user,
-            then redirect to the dashboard.
+    Login screen.
+        - GET:  Show the login form.
+        - POST: Validate the name (2-10 chars), save to session, log the user,
+    then redirect to the dashboard.
     """
     # Already logged in — skip straight to dashboard
     if "user" in session:

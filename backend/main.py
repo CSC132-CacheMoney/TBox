@@ -9,15 +9,21 @@ from retire  import retire_bp
 import database
 import webbrowser
 #import alerts
+from dotenv import load_dotenv  # Load environment variables from .env file
+
+load_dotenv()  # Load the .env file
+
 
 def open_browser():
     #Opens the localhost url, you can also acess it from the public url flask provides if you are on the same network.
     webbrowser.open_new("http://localhost:6767")
 
 #creates a Flask "Class", with arguments to change where it looks for the html and css files.
-app = Flask(__name__, template_folder="../GUI/templates", static_folder="../GUI")
 
-#T\his checks if the database file exists, and if not it initializes it. This is important to ensure that the database doesnt get reset every time the server starts.
+app = Flask(__name__, template_folder="../GUI/templates", static_folder="../GUI")
+#Wont work without, create a .env file in the backend folder with a line like SECRET_KEY="XXXX"
+app.secret_key = os.getenv("SECRET_KEY")  
+#This checks if the database file exists, and if not it initializes it. This is important to ensure that the database doesnt get reset every time the server starts.
 if not os.path.exists("../TBox/data"):
     database.init_db()  # Ensure DB is initialized on startup
     print("Database initialized.")

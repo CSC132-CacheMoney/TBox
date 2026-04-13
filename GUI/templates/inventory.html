@@ -212,6 +212,26 @@
       transition: border-color 0.2s, color 0.2s;
     }
     .clear-btn:hover { border-color: var(--salmon); color: var(--salmon); }
+
+    .checkout-btn {
+      padding: 10px 28px;
+      border-radius: 999px;
+      border: none;
+      background: var(--salmon);
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s, opacity 0.2s;
+      letter-spacing: 0.3px;
+    }
+    .checkout-btn:hover:not(:disabled) { background: #d45f5f; }
+    .checkout-btn:active:not(:disabled) { transform: scale(0.97); }
+    .checkout-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -286,6 +306,15 @@
   <div class="selection-bar">
     <div class="selection-info"><span id="count">0</span> selected</div>
     <div class="selected-ids" id="ids-display">—</div>
+
+    <form id="checkout-form" method="POST" action="/inventory/checkout" style="display:contents;">
+      <input type="hidden" name="tool_ids" id="tool-ids-input" value="">
+      <button type="submit" class="checkout-btn" id="checkout-btn" disabled
+              onclick="document.getElementById('tool-ids-input').value = selectedToolIds.join(',')">
+        Check Out
+      </button>
+    </form>
+
     <button class="clear-btn" onclick="clearSelection()">Clear</button>
   </div>
 
@@ -316,6 +345,7 @@
       document.getElementById("count").textContent = selectedToolIds.length;
       document.getElementById("ids-display").textContent =
         selectedToolIds.length > 0 ? "IDs: [" + selectedToolIds.join(", ") + "]" : "—";
+      document.getElementById("checkout-btn").disabled = selectedToolIds.length === 0;
     }
   </script>
 
