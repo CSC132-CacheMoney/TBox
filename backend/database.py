@@ -1,6 +1,7 @@
 import os
 import sqlite3
 from datetime import datetime
+import pico_Reader
 
 
 DB_PATH = "data/tools.db"
@@ -63,7 +64,7 @@ def init_db():
 
 
 # ── TOOLS ─────────────────────────────────────────────────────────────────────
-def register_tool(name, rfid_tag=None, category="General", condition="Good"):
+def register_tool(name, rfid_tag=pico_Reader.rand_Tool_ID(), category="General", condition="Good"):
     conn = get_connection()
     try:
         conn.execute("""

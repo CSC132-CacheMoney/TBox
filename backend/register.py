@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-import TBox.backend.pico_Reader as reader
+import pico_Reader as reader
 import database
  
 register_bp = Blueprint("register", __name__)
@@ -20,16 +20,16 @@ def register_tool():
         tool_name = request.form.get("tool_name", "").strip().lower().capitalize()
         condition = request.form.get("condition", "Good")
         category  = request.form.get("category",  "Hand Tool")
-        rfid_tag  = reader.write_rfid_tag(reader.init_rfid())  # Attempt to write a new RFID tag; returns None if failed
+        rfid_tag  = reader.write_rfid_tag(reader.rand_Tool_ID())  # Attempt to write a new RFID tag; returns None if failed
  
         # Validate
         if not tool_name:
             flash("Please enter a tool name.", "error")
             return render_template("register.html",
-                                   condition=condition,
-                                   category=category)
+                                condition=condition,
+                                category=category)
  
-        try:
+        try: 
             database.register_tool(
                 name=tool_name,
                 rfid_tag=rfid_tag,
