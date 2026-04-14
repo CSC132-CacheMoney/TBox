@@ -6,7 +6,8 @@
   "alerts": {
     "checkout_limit_hours": 24,
     "alert_method": "console",
-    "email_target": "abc123@email.latech.edu"
+    "email_target": "abc123@email.latech.edu",
+    "email_sender": "abc123@email.latech.edu"
   },
   "database": {
     "path": "data/tools.db"
