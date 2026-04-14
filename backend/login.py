@@ -10,7 +10,7 @@ def login():
     Login screen.
         - GET:  Show the login form.
         - POST: Validate the name (2-10 chars), save to session, log the user,
-    then redirect to the dashboard.
+            then redirect to the dashboard.
     """
     # Already logged in — skip straight to dashboard
     if "user" in session:

@@ -21,15 +21,15 @@
 
 from smtplib import SMTP
 from time import sleep
-# import aiosmtpd as server
-# from email.mime.text import MIMEText
-
+import aiosmtpd as server
+from email.mime.text import MIMEText
+from subprocess import *
 
 # ------------------------------------------------
 
 
 HOST = "127.0.0.1"
-PORT = 6767
+PORT = 6969
 ADDRESS_FROM = f"http://{HOST}:{PORT}"
 ADDRESS_TO = "len016@email.latech.edu"
 
@@ -128,6 +128,25 @@ class SMTPServer:
         self.smtp.send_message()
 """
 
+def initalerts():
+    print("Initializing alerts system...")
+    try:
+        command = "python -m aiosmtpd -n -l 127.0.0.1:6969"
+        run(command, shell=True, check=True)
+        print("SMTP server started successfully.")
+    except Exception as e:
+        print(f"Error starting SMTP server: {e}")
+        
+def test_alerts():
+    alert = SMTPConsole()
+    sleep(3)
+    alert.registered()
+    sleep(3)
+    alert.checked_in()
+    sleep(3)
+    alert.checked_out()
+    sleep(3)
+    alert.retired()
 
 # ------------------------------------------------
 

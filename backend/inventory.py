@@ -16,7 +16,7 @@ def inventory():
 
     filter_by = request.args.get("filter", "all")
 
-    all_tools = database.get_all_tools()
+    all_tools = [dict(row) for row in database.get_all_tools()]
 
     if filter_by == "available":
         tools = [t for t in all_tools if t["status"] == "Available"]

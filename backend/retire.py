@@ -16,7 +16,7 @@ def retire_tool():
         return redirect(url_for("login.login"))
 
     if request.method == "POST":
-        raw = request.form.get("tool_ids", "")
+        raw = request.form.get("tool_id", "")
         tool_ids = [int(i) for i in raw.split(",") if i.strip().isdigit()]
 
         if not tool_ids:
@@ -46,6 +46,6 @@ def retire_tool():
         return redirect(url_for("inventory.inventory"))
 
     # GET — load all tools that can be retired (not already retired)
-    tools = database.get_active_tools()
+    tools = [dict(row) for row in database.get_active_tools()]
 
     return render_template("retire.html", tools=tools)

@@ -37,6 +37,18 @@ try:
         category="Hand Tool",
         condition="Good"
     )
+    database.register_tool(
+        name="Air Compressor",
+        rfid_tag="T7890123",
+        category="Power Tool",
+        condition="Poor"
+    )
+    database.register_tool(
+        name="Extension Cord",
+        rfid_tag="T8901234",
+        category="Accessory",
+        condition="Good"
+    )
     print("Sample tools registered successfully.")
 except ValueError as e:
     print('Registration Failed:\n' + str(e))
