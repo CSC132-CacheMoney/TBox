@@ -2,10 +2,10 @@ import os
 import threading
 from flask import Flask
 from login import login_bp
-from dashboard  import dashboard_bp
-from inventory  import inventory_bp
-from register  import register_bp
-from retire  import retire_bp
+from dashboard import dashboard_bp
+from inventory import inventory_bp
+from register import register_bp
+from retire import retire_bp
 import database
 import webbrowser
 import alerts as alert
