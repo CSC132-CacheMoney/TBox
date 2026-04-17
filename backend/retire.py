@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 import database
+import alerts
 
 retire_bp = Blueprint("retire", __name__)
 
@@ -23,7 +24,7 @@ def retire_tool():
             flash("No tools selected.", "error")
             return redirect(url_for("retire.retire_tool"))
 
-        retired_names = []
+        retired_name = ""
         for tool_id in tool_ids:
             tool = database.get_tool_by_id(tool_id)
             if tool:
@@ -35,13 +36,14 @@ def retire_tool():
                     )
                     continue
                 database.retire_tool(tool_id)
-                retired_names.append(tool["name"])
+                retired_name = tool['name']
 
-        if retired_names:
+        if retired_name:
             flash(
-                f"{len(retired_names)} tool(s) retired: {', '.join(retired_names)}.",
+                f"Tool retired: {retired_name}.",
                 "success"
             )
+            alerts.server.retired(retired_name)
 
         return redirect(url_for("inventory.inventory"))
 

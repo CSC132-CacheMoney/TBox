@@ -1,55 +1,29 @@
 # alerts.py
+#
 # Loki Darius Edullantes Nordstrom
-# 
-# alerts.py does not actually send emails at the moment. Follow
-# the steps below to "receive emails" to the Git Bash console:
-# 
-# 1.) pip install aiosmtpd or from requirements.txt in Git Bash
-# 
-# 2.) run main.py as "__main__" to a console
-# 
-# 3.) run this command in Git Bash:
-#     python -m aisomtpd -n -l 127.0.0.1:6767
-# 
-# 4.) run alerts.py as "__main__" to a second console
-# 
-# 5.) "Emails" should print to console back in Git Bash
-#     thanks to aiosmtpd.
-# 
+# Several tinkers by Aidan Southerland
 # ------------------------------------------------
 
 
-from smtplib import SMTP
-from time import sleep
-import aiosmtpd as server
+from smtplib import SMTP_SSL
+# from time import sleep
+# import aiosmtpd as server
 from email.mime.text import MIMEText
-from subprocess import *
-
-# ------------------------------------------------
-
-
-HOST = "127.0.0.1"
-PORT = 6969
-ADDRESS_FROM = f"http://{HOST}:{PORT}"
-ADDRESS_TO = "len016@email.latech.edu"
+from subprocess import run
+from json import load
 
 
 # ------------------------------------------------
 
 
-# Alert class
-class SMTPConsole:
+# SMTPServer class
+class SMTPServer:
     # Constructor
     def __init__(self):
-        self.start(
-            HOST,
-            PORT
-        )
-        # self.smtp.ehlo()
-        # self.smtp.starttls()
+        self.start("smtp.gmail.com", 465)
     
     
-    # String
+    # String overload
     def __str__(self):
         return "Alert object"
     
@@ -61,73 +35,74 @@ class SMTPConsole:
     # --
     @smtp.setter
     def smtp(self, smtp):
-        if not isinstance(smtp, SMTP):
-            raise Exception(f"Alert.smtp -> attempted to assign non-SMTP: {smtp}")
+        if not isinstance(smtp, SMTP_SSL):
+            return
         self._smtp = smtp
     
     
-    # Alert methods
+    # server methods
     def start(self, host: str, port: int):
-        if not isinstance(host, str) or not isinstance(port, int):
+        if not isinstance(host, str):
             return
-        self.smtp = SMTP(
-            host,
-            port,
-            timeout = 30.0
-        ) 
+        elif not isinstance(port, int):
+            return
+        self.smtp = SMTP_SSL(host, port) 
     # --
-    def registered(self):
-        self.smtp.sendmail(
-            ADDRESS_FROM,
-            ADDRESS_TO,
-            "An item has been registered to ToolVault."
+    def registered(self, toolName: str):
+        self.send(
+            f"An item: <{toolName}> has been registered to ToolVault.",
+            "Tool Registered"
         )
     # --
-    def checked_out(self):
-        self.smtp.sendmail(
-            ADDRESS_FROM,
-            ADDRESS_TO,
-            "An item has been checked-out from ToolVault."
+    def checked_out(self, toolName: str):
+        self.send(
+            f"An item: <{toolName}> has been checked out from ToolVault.",
+            "Tool Checked Out"
         )
     # --
-    def checked_in(self):
-        self.smtp.sendmail(
-            ADDRESS_FROM,
-            ADDRESS_TO,
-            "An item has been check-in into ToolVault."
+    def checked_in(self, toolName: str):
+        self.send(
+            f"An item: <{toolName}> has been checked in to ToolVault.",
+            "Tool Checked In"
         )
     # --
-    def retired(self):
-        self.smtp.sendmail(
-            ADDRESS_FROM,
-            ADDRESS_TO,
-            "An item has been retired from ToolVault."
+    def retired(self, toolName: str):
+        self.send(
+            f"A tool: <{toolName}> has been retired from ToolVault.",
+            "Tool Retired"
         )
+    # --
+    def send(self, message: str, subject = ""):
+        if not isinstance(message, str):
+            return
+        elif not isinstance(subject, str):
+            return
+        # --
+        jsonRead = load(
+            open(
+                "../config/settings.json",
+                "r",
+                encoding = "utf-8"
+            )
+        )
+        email = MIMEText(message)
+        email["Subject"] = subject
+        email["From"] = jsonRead["alerts"]["email_from"]
+        email["To"] = jsonRead["alerts"]["email_to"]
+        self.smtp.login(
+            jsonRead["alerts"]["email_target"],
+            "intentionallyIncorrectAppPassword"
+        )
+        self.smtp.send_message(email)
     # --
     def quit(self):
         self.smtp.quit()
 
-"""
-# Alert class
-class SMTPServer:
-    # Constructor
-    def __init__(self):
-        self.smtp = SMTP(
-            "smtp.gmail.com",
-            587
-        )
-        self.smtp.starttls()
-        self.smtp.login("len016@email.latech.edu")
-    
-    
-    # SMTPServer methods
-    def send_message(self, subject = "Subject", text = "Text."):
-        message = MIMEText(text)
-        message["Subject"] = subject
-        message["From"] = ""
-        self.smtp.send_message()
-"""
 
+# ------------------------------------------------
+
+
+# Function below for main.py (Southerland)
 def initalerts():
     print("Initializing alerts system...")
     try:
@@ -136,28 +111,12 @@ def initalerts():
         print("SMTP server started successfully.")
     except Exception as e:
         print(f"Error starting SMTP server: {e}")
-        
-def test_alerts():
-    alert = SMTPConsole()
-    sleep(3)
-    alert.registered()
-    sleep(3)
-    alert.checked_in()
-    sleep(3)
-    alert.checked_out()
-    sleep(3)
-    alert.retired()
+
 
 # ------------------------------------------------
 
 
+server = SMTPServer()
+
 if __name__ == "__main__":
-    alert = SMTPConsole()
-    sleep(3)
-    alert.registered()
-    sleep(3)
-    alert.checked_in()
-    sleep(3)
-    alert.checked_out()
-    sleep(3)
-    alert.retired()
+    print("Running alerts.py as __main__. Please run main.py, instead.")
