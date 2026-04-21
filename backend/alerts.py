@@ -9,6 +9,7 @@ from smtplib import SMTP_SSL
 from email.mime.text import MIMEText
 from subprocess import run
 from json import load
+from pathlib import Path
 
 
 # ------------------------------------------------
@@ -188,4 +189,6 @@ def initalerts():
 if __name__ == "__main__":
     print("Running alerts.py as __main__. Please run main.py, instead.")
 else:
+    if not Path("assets/cat.png").is_file():
+        raise Exception("The cat is missing...")
     server = SMTPServer()
