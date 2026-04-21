@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 import database
+import alerts
 
 inventory_bp = Blueprint("inventory", __name__)
 
@@ -8,7 +9,9 @@ inventory_bp = Blueprint("inventory", __name__)
 def inventory():
     """
     Inventory screen (s10069).
+
     Displays all non-retired tools as clickable pill buttons.
+
     Supports optional ?filter= query param: all | available | checked-out
     """
     if "user" not in session:
@@ -49,10 +52,11 @@ def checkout():
     raw = request.form.get("tool_ids", "")
     tool_ids = [int(i) for i in raw.split(",") if i.strip().isdigit()]
 
-    success, failed = [], []
+    success, toolsSucceeded, failed = [], [], []
     for tool_id in tool_ids:
         try:
             database.checkout_tool(tool_id, session["user"])
+            toolsSucceeded.append(database.get_tool_by_id(tool_id))
             success.append(tool_id)
         except ValueError as e:
             failed.append(str(e))
@@ -61,7 +65,9 @@ def checkout():
         flash(f"{len(success)} tool(s) checked out to {session['user']}.", "success")
     for msg in failed:
         flash(msg, "error")
-
+    
+    alerts.server.check_out_many(toolsSucceeded)
+    
     return redirect(url_for("inventory.inventory"))
 
 
@@ -77,10 +83,11 @@ def return_tool():
     raw = request.form.get("tool_ids", "")
     tool_ids = [int(i) for i in raw.split(",") if i.strip().isdigit()]
 
-    success, failed = [], []
+    success, toolsSucceeded, failed = [], [], []
     for tool_id in tool_ids:
         try:
             database.return_tool(tool_id)
+            toolsSucceeded.append(database.get_tool_by_id(tool_id))
             success.append(tool_id)
         except Exception as e:
             failed.append(str(e))
@@ -89,5 +96,7 @@ def return_tool():
         flash(f"{len(success)} tool(s) returned successfully.", "success")
     for msg in failed:
         flash(msg, "error")
+    
+    alerts.server.checked_in_many(toolsSucceeded)
 
     return redirect(url_for("inventory.inventory"))

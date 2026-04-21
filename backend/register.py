@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 import pico_Reader as reader
 import database
+import alerts
  
 register_bp = Blueprint("register", __name__)
  
@@ -25,9 +26,11 @@ def register_tool():
         # Validate
         if not tool_name:
             flash("Please enter a tool name.", "error")
-            return render_template("register.html",
-                                condition=condition,
-                                category=category)
+            return render_template(
+                "register.html",
+                condition=condition,
+                category=category
+            )
  
         try: 
             database.register_tool(
@@ -37,6 +40,7 @@ def register_tool():
                 condition=condition
             )
             flash(f"'{tool_name}' registered successfully.", "success")
+            alerts.server.registered(tool_name)
             return redirect(url_for("inventory.inventory"))
  
         except ValueError as e:
