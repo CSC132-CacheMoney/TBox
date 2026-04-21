@@ -20,9 +20,9 @@ class SMTPServer:
     
     
     """
-    Core class that enables an SMTP server so that emails can
-    be sent out as alerts to when items get checked in, checked
-    out, registered, and retired.
+    Core class that enables an SMTP server. It will then be
+    capable of sending emails when items get checked in,
+    checked out, registered, and retired.
     """
     
     
