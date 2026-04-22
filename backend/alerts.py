@@ -1,7 +1,7 @@
 # alerts.py
 #
-# Loki Darius Edullantes Nordstrom
-# Several tinkers by Aidan Southerland
+# Loki Nordstrom
+# Aidan Southerland
 # ------------------------------------------------
 
 
@@ -28,41 +28,44 @@ class SMTPServer:
     
     # Constructor
     def __init__(self):
+        # It is recommended to use gmail's SMTP hosting service
+        # with port 465. Setting up our own SMTP server is not
+        # feasible in the time we have left until the Expo.
         self.start("smtp.gmail.com", 465)
     
     
     # String overload
     def __str__(self):
-        return "SMTPServer object"
+        return super().__str__() + "\nSMTPServer object"
     
     
     # Alert.smtp
     @property
-    def smtp(self):
-        return self._smtp
+    def smtp(self): return self._smtp
     # --
     @smtp.setter
-    def smtp(self, smtp):
-        if not isinstance(smtp, SMTP_SSL):
-            return
-        self._smtp = smtp
+    def smtp(self, _smtp):
+        if not isinstance(_smtp, SMTP_SSL):
+            raise TypeError(f"Alert.smtp -> attempt to assign non-SMTP_SSL, {_smtp}: {type(_smtp)}")
+        self._smtp = _smtp
     
     
     # Server methods
     def start(self, host: str, port: int):
         """Initialize the SMTP server."""
-        #  ---------------------------
-        if not isinstance(host, str):
-            return
-        elif not isinstance(port, int):
-            return
-        self.smtp = SMTP_SSL(host, port) 
+        
+        try:
+            _host = str(host)
+            _port = int(port)
+        except:
+            raise TypeError(f"Could not pass 'host' or 'port' as intended types: {host}, {port}")
+        self.smtp = SMTP_SSL(_host, _port) 
     
     # --
     
     def registered(self, toolName: str):
         """Send email on item registered."""
-        #  ------------------------------
+        
         msg = (
             f"An item: <{toolName}> has been registered to ToolVault.",
             "Tool Registered"
@@ -73,7 +76,7 @@ class SMTPServer:
     
     def checked_out(self, toolName: str):
         """Send email on item checked out."""
-        #  -------------------------------
+        
         msg = (
             f"An item: <{toolName}> has been checked out from ToolVault.",
             "Tool Checked Out"
@@ -88,7 +91,7 @@ class SMTPServer:
 
         This function is specifically for inventory.checkout().
         """
-        #  ---------------------------------------
+        
         msg = (
             f"The following tools have been checked out: <{", ".join(toolNames)}>.",
             "Multiple Tools Checked Out"
@@ -99,7 +102,7 @@ class SMTPServer:
     
     def checked_in(self, toolName: str):
         """Send email on item checked in."""
-        #  ------------------------------
+        
         msg = (
             f"An item: <{toolName}> has been checked in to ToolVault.",
             "Tool Checked In"
@@ -114,7 +117,7 @@ class SMTPServer:
         
         This function is specifically for inventory.return_tool().
         """
-        # -------------------------------------------------------
+        
         msg = (
             f"The following tools have been checked in: <{", ".join(toolNames)}>.",
             "Multiple Tools Checked In"
@@ -125,7 +128,7 @@ class SMTPServer:
     
     def retired(self, toolName: str):
         """Send email on item retired."""
-        #  ---------------------------
+        
         msg = (
             f"A tool: <{toolName}> has been retired from ToolVault.",
             "Tool Retired"
@@ -136,28 +139,28 @@ class SMTPServer:
     
     def send(self, message: str, subject = ""):
         """Send emails."""
-        #  ------------
-        if not isinstance(message, str):
-            return
-        elif not isinstance(subject, str):
-            return
+        
+        try:
+            _message = str(message)
+            _subject = str(message)
+        except:
+            raise TypeError(f"Could not pass 'message' or 'subject' as strings: {message}, {message}")
         
         jsonRead = load(
             open(
-                "../config/settings.json",
-                "r",
+                "config/settings.json",
                 encoding = "utf-8"
             )
         )
         
-        email = MIMEText(message)
-        email["Subject"] = subject
+        email = MIMEText(_message)
+        email["Subject"] = _subject
         email["From"] = jsonRead["alerts"]["email_from"]
         email["To"] = jsonRead["alerts"]["email_to"]
         
         self.smtp.login(
-            jsonRead["alerts"]["email_target"],
-            "intentionallyIncorrectAppPassword"
+            jsonRead["alerts"]["email_from"],
+            jsonRead["alerts"]["email_app_password"]
         )
         self.smtp.send_message(email)
     
@@ -165,7 +168,7 @@ class SMTPServer:
     
     def quit(self):
         """End SMTP server."""
-        #  ----------------
+        
         self.smtp.quit()
 
 
@@ -177,7 +180,7 @@ def initalerts():
     print("Initializing alerts system...")
     try:
         command = "python -m aiosmtpd -n -l 127.0.0.1:6969"
-        run(command, shell=True, check=True)
+        run(command, shell = True, check = True)
         print("SMTP server started successfully.")
     except Exception as e:
         print(f"Error starting SMTP server: {e}")
@@ -186,9 +189,7 @@ def initalerts():
 # ------------------------------------------------
 
 
-if __name__ == "__main__":
-    print("Running alerts.py as __main__. Please run main.py, instead.")
-else:
+if __name__ != "__main__":
     if not Path("assets/cat.png").is_file():
-        raise Exception("The cat is missing...")
+        raise FileNotFoundError("The cat is missing...")
     server = SMTPServer()

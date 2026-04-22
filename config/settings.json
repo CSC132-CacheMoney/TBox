@@ -6,8 +6,9 @@
   "alerts": {
     "checkout_limit_hours": 24,
     "alert_method": "console",
-    "email_from": "abc123@email.latech.edu",
-    "email_to": "abc123@email.latech.edu"
+    "email_from": "toolVault@gmail.com",
+    "email_to": "toolVault@gmail.com",
+    "email_app_password": "abcd efgh ijkl mnop"
   },
   "database": {
     "path": "data/tools.db"

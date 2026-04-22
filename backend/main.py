@@ -8,7 +8,6 @@ from register import register_bp
 from retire import retire_bp
 import database
 import webbrowser
-import alerts as alert
 from dotenv import load_dotenv  # Load environment variables from .env file
 import time
 

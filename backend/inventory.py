@@ -56,7 +56,7 @@ def checkout():
     for tool_id in tool_ids:
         try:
             database.checkout_tool(tool_id, session["user"])
-            toolsSucceeded.append(database.get_tool_by_id(tool_id))
+            toolsSucceeded.append(database.get_tool_by_id(tool_id)["name"])
             success.append(tool_id)
         except ValueError as e:
             failed.append(str(e))
@@ -87,7 +87,7 @@ def return_tool():
     for tool_id in tool_ids:
         try:
             database.return_tool(tool_id)
-            toolsSucceeded.append(database.get_tool_by_id(tool_id))
+            toolsSucceeded.append(database.get_tool_by_id(tool_id)["name"])
             success.append(tool_id)
         except Exception as e:
             failed.append(str(e))
