@@ -29,7 +29,7 @@ app = Flask(__name__, template_folder="../GUI/templates", static_folder="../GUI"
 #Wont work without, create a .env file in the backend folder with a line like SECRET_KEY="XXXX"
 app.secret_key = os.getenv("SECRET_KEY")  
 #This checks if the database file exists, and if not it initializes it. This is important to ensure that the database doesnt get reset every time the server starts.
-if not os.path.exists("../TBox/data"):
+if not os.path.exists("../TBox/data/tools.db"):
     database.init_db()  # Ensure DB is initialized on startup
     print("Database initialized.")
     #print (not os.path.exists("../TBox/data"), os.path.abspath("../TBox/data")) # Debugging line to check if the database file is created in the expected location.
