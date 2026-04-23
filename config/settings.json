@@ -1,0 +1,17 @@
+{
+  "rfid": {
+    "port": "/dev/ttyUSB0",
+    "baud_rate": 9600
+  },
+  "alerts": {
+    "checkout_limit_hours": 24,
+    "email_host": "smtp.protonmail.ch",
+    "email_port": 587,
+    "alert_method": "console",
+    "email_from": "ToolVault-Alerts@standard-labs.com",
+    "email_to": "Topographic@Standard-Labs.com"
+  },
+  "database": {
+    "path": "data/tools.db"
+  }
+}
