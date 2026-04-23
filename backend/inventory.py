@@ -1,8 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 import database
-import alerts
+from alerts import SMTPServer
+import pico_Reader
 
 inventory_bp = Blueprint("inventory", __name__)
+Notify = SMTPServer()
+
 
 
 @inventory_bp.route("/inventory")
@@ -52,21 +55,21 @@ def checkout():
     raw = request.form.get("tool_ids", "")
     tool_ids = [int(i) for i in raw.split(",") if i.strip().isdigit()]
 
-    success, toolsSucceeded, failed = [], [], []
+    succeeded, failed = [], []
     for tool_id in tool_ids:
         try:
             database.checkout_tool(tool_id, session["user"])
-            toolsSucceeded.append(database.get_tool_by_id(tool_id)["name"])
-            success.append(tool_id)
+            succeeded.append(database.get_tool_by_id(tool_id)["name"])
+            succeeded.append(tool_id)
         except ValueError as e:
             failed.append(str(e))
 
-    if success:
-        flash(f"{len(success)} tool(s) checked out to {session['user']}.", "success")
+    if succeeded:
+        flash(f"{len(succeeded)} tool(s) checked out to {session['user']}.", "success")
     for msg in failed:
         flash(msg, "error")
     
-    alerts.server.check_out_many(toolsSucceeded)
+    Notify.send_checked_out(succeeded)
     
     return redirect(url_for("inventory.inventory"))
 
@@ -83,20 +86,24 @@ def return_tool():
     raw = request.form.get("tool_ids", "")
     tool_ids = [int(i) for i in raw.split(",") if i.strip().isdigit()]
 
-    success, toolsSucceeded, failed = [], [], []
+    succeeded, failed = [], [], []
     for tool_id in tool_ids:
         try:
             database.return_tool(tool_id)
-            toolsSucceeded.append(database.get_tool_by_id(tool_id)["name"])
-            success.append(tool_id)
+            succeeded.append(database.get_tool_by_id(tool_id)["name"])
+            succeeded.append(tool_id)
         except Exception as e:
             failed.append(str(e))
 
-    if success:
-        flash(f"{len(success)} tool(s) returned successfully.", "success")
+    if succeeded:
+        flash(f"{len(succeeded)} tool(s) returned successfully.", "success")
     for msg in failed:
         flash(msg, "error")
-    
-    alerts.server.checked_in_many(toolsSucceeded)
-
+        
+    try:
+        Notify.send_checked_in(succeeded)
+        print("Check-in alerts sent successfully.")
+    except Exception as e:
+        print(f"Error sending check-in alerts: {e}")
+        
     return redirect(url_for("inventory.inventory"))
