@@ -152,6 +152,38 @@
       box-shadow: 0 1px 4px rgba(0,0,0,0.5);
     }
 
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1d1d1d;
+      border: 1.5px solid rgba(76,175,80,0.3);
+      color: #f0f0f0;
+      padding: 13px 24px;
+      border-radius: 999px;
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4caf50;
+      flex-shrink: 0;
+    }
+
     /* ── ERROR MESSAGE ── */
     .error-msg {
       color: #e74c3c;
@@ -164,6 +196,11 @@
   </style>
 </head>
 <body>
+
+  <div class="toast" id="toast">
+    <div class="toast-dot"></div>
+    <span id="toast-msg"></span>
+  </div>
 
   <h1 class="brand">Tool Vault</h1>
 
@@ -209,6 +246,18 @@
       this.classList.remove('error');
       document.getElementById('error-msg').classList.remove('visible');
     });
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg + ' returned';
+      clearTimeout(toastTimer);
+      toast.classList.add('show');
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+
+    const es = new EventSource('/login/events');
+    es.onmessage = e => showToast(e.data);
   </script>
 
 </body>

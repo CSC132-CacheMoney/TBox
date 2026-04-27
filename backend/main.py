@@ -11,6 +11,12 @@ import webbrowser
 from dotenv import load_dotenv  # Load environment variables from .env file
 import time
 import alerts  # Import the alerts module to initialize it
+from pico_Reader import RFIDBridge
+
+global_reader = None
+
+
+
 
 load_dotenv()  # Load the .env file
 bar = threading.Barrier(3)  # Create a barrier for 3 threads (server, alerts, open_browser)

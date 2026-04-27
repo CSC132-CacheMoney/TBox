@@ -74,36 +74,3 @@ def checkout():
     return redirect(url_for("inventory.inventory"))
 
 
-@inventory_bp.route("/inventory/return", methods=["POST"])
-def return_tool():
-    """
-    Handle return of one or more tools.
-    Expects form field 'tool_ids' (comma-separated).
-    """
-    if "user" not in session:
-        return redirect(url_for("login.login"))
-
-    raw = request.form.get("tool_ids", "")
-    tool_ids = [int(i) for i in raw.split(",") if i.strip().isdigit()]
-
-    succeeded, failed = [], [], []
-    for tool_id in tool_ids:
-        try:
-            database.return_tool(tool_id)
-            succeeded.append(database.get_tool_by_id(tool_id)["name"])
-            succeeded.append(tool_id)
-        except Exception as e:
-            failed.append(str(e))
-
-    if succeeded:
-        flash(f"{len(succeeded)} tool(s) returned successfully.", "success")
-    for msg in failed:
-        flash(msg, "error")
-        
-    try:
-        Notify.send_checked_in(succeeded)
-        print("Check-in alerts sent successfully.")
-    except Exception as e:
-        print(f"Error sending check-in alerts: {e}")
-        
-    return redirect(url_for("inventory.inventory"))

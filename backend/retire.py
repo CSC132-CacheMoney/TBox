@@ -1,8 +1,75 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
 import database
 import alerts
+import threading
+import time
+from pico_Reader import RFIDBridge, RFIDBridgeError
 
 retire_bp = Blueprint("retire", __name__)
+
+_rfid_stop   = threading.Event()
+_rfid_result = {"tag": None}   # written by worker, read by poll endpoint
+_rfid_worker = threading.Thread()
+
+
+def _rfid_write_worker(tag_to_write: str):
+    _rfid_result["tag"] = None
+    try:
+        with RFIDBridge("/dev/ttyACM0") as rfid:
+            while not _rfid_stop.is_set():
+                try:
+                    rfid.scan()
+                    rfid.write_block(4, tag_to_write)
+                    _rfid_result["tag"] = tag_to_write
+                    break
+                except RFIDBridgeError as e:
+                    if "No tag" in str(e):
+                        time.sleep(0.2)
+                        continue
+                    raise
+    except Exception as e:
+        print(f"[RFID WRITE] {e}")
+
+
+@retire_bp.route("/rfid/init", methods=["POST"])
+def rfid_init():
+    global _rfid_worker
+    if "user" not in session:
+        return jsonify({"success": False}), 401
+
+    rfid_tag = (request.json or {}).get("rfid_tag", "")
+    if not rfid_tag:
+        return jsonify({"success": False, "msg": "no rfid_tag provided"}), 400
+
+    _rfid_stop.set()
+    if _rfid_worker.is_alive():
+        _rfid_worker.join(timeout=2)
+
+    _rfid_stop.clear()
+    _rfid_worker = threading.Thread(target=_rfid_write_worker, args=(rfid_tag,), daemon=True)
+    _rfid_worker.start()
+    return jsonify({"success": True})
+
+
+@retire_bp.route("/rfid/poll")
+def rfid_poll():
+    if "user" not in session:
+        return jsonify({"tag": None}), 401
+    return jsonify({"tag": _rfid_result["tag"]})
+
+
+@retire_bp.route("/replace", methods=["POST"])
+def replace_tool():
+    if "user" not in session:
+        return redirect(url_for("login.login"))
+    _rfid_stop.set()
+    tool_id = request.form.get("tool_id", "")
+    tool = database.get_tool_by_id(int(tool_id)) if tool_id.isdigit() else None
+    if tool:
+        flash(f"RFID tag replaced for '{tool['name']}'.", "success")
+    else:
+        flash("Tool not found.", "error")
+    return redirect(url_for("inventory.inventory"))
 
 
 @retire_bp.route("/retire", methods=["GET", "POST"])

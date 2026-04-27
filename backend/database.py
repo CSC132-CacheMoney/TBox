@@ -97,7 +97,16 @@ def get_tool_by_id(tool_id):
     tool = conn.execute("SELECT * FROM tools WHERE id = ?", (tool_id,)).fetchone()
     conn.close()
     return tool
- 
+
+def valid_tool_id(tool_id):
+    conn = get_connection()
+    try:
+        get_tool_by_rfid(tool_id)
+        return True
+    except:
+        return False
+    finally:
+        conn.close
  
 def get_tool_by_rfid(rfid_tag):
     conn = get_connection()

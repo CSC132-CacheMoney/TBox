@@ -636,12 +636,12 @@
       confirm_.disabled    = true;
     }
 
-    // ── RFID READER MOCK (replace body of these functions with real pico_Reader calls via fetch) ──
     function initRfidReader() {
-      const btn  = document.getElementById("btn-init-rfid");
-      const dot  = document.getElementById("rfid-dot");
-      const txt  = document.getElementById("rfid-status-text");
-      const zone = document.getElementById("tap-zone");
+      if (!selectedTool) return;
+      const btn    = document.getElementById("btn-init-rfid");
+      const dot    = document.getElementById("rfid-dot");
+      const txt    = document.getElementById("rfid-status-text");
+      const zone   = document.getElementById("tap-zone");
       const tapTxt = document.getElementById("tap-zone-text");
 
       btn.disabled    = true;
@@ -649,14 +649,17 @@
       dot.className   = "rfid-dot scanning";
       txt.textContent = "Initializing reader…";
 
-      // Call Flask endpoint to initialize the RFID reader
-      fetch("/rfid/init", { method: "POST" })
+      fetch("/rfid/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rfid_tag: selectedTool.rfid_tag })
+      })
         .then(r => r.json())
         .then(data => {
           if (data.success) {
             rfidInitialized = true;
             dot.className      = "rfid-dot ready";
-            txt.textContent    = "RFID Reader Initialized";
+            txt.textContent    = "Ready — tap new sticker to reader";
             btn.textContent    = "Reader Ready";
             btn.classList.add("initialized");
             zone.className     = "tap-zone active";
@@ -664,26 +667,20 @@
             startRfidPolling();
           } else {
             dot.className      = "rfid-dot";
-            txt.textContent    = "Initialization failed — try again";
+            txt.textContent    = data.msg || "Initialization failed — try again";
             btn.textContent    = "Initialize RFID Reader";
             btn.disabled       = false;
           }
         })
         .catch(() => {
-          // DEMO fallback when no server is running
-          rfidInitialized = true;
-          dot.className      = "rfid-dot ready";
-          txt.textContent    = "RFID Reader Initialized";
-          btn.textContent    = "Reader Ready";
-          btn.classList.add("initialized");
-          zone.className     = "tap-zone active";
-          tapTxt.textContent = "Tap new RFID sticker to reader…";
-          startRfidPolling();
+          dot.className      = "rfid-dot";
+          txt.textContent    = "Could not reach reader — try again";
+          btn.textContent    = "Initialize RFID Reader";
+          btn.disabled       = false;
         });
     }
 
     function startRfidPolling() {
-      // Poll Flask endpoint every 500ms waiting for a tag tap
       rfidPollingInterval = setInterval(() => {
         fetch("/rfid/poll")
           .then(r => r.json())
@@ -693,12 +690,7 @@
               onTagDetected(data.tag);
             }
           })
-          .catch(() => {
-            // DEMO: simulate a tag tap after 3 seconds
-            stopRfidPolling();
-            const demoTag = "RFID-" + Math.random().toString(36).substring(2,8).toUpperCase();
-            setTimeout(() => onTagDetected(demoTag), 2500);
-          });
+          .catch(() => stopRfidPolling());
       }, 500);
     }
 
