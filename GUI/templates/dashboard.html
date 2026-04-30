@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TBox - Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+</head>
+<body class="screen">
+  <a href="/logout" class="icon-btn logout">&#x2192; Logout</a>
+  <h1>Welcome, {{ user }}</h1>
+  <nav class="menu">
+    <a href="/inventory" class="menu-item">📦 Inventory</a>
+    <a href="/register"  class="menu-item">➕ Register Tool</a>
+    <a href="/retire"    class="menu-item">🗑️ Retire Tool</a>
+  </nav>
+</body>
+</html>

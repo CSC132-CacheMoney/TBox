@@ -1,0 +1,52 @@
+:root {
+    --bg: #1a1a1a;
+    --surface: #1d1d1d;
+    --text: #ffffff;
+    --accent: #ed7676;    /* hover color from your design */
+    --input-bg: #ffffff;
+    --input-text: #000000;
+    --radius: 16px;
+}
+
+body.screen {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.brand { font-size: 64px; }
+
+.text-input {
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: 1px solid #000;
+    border-radius: var(--radius);
+    padding: 2px 8px;
+    font-size: 14px;
+    font-weight: bold;
+    width: 368px;
+}
+.text-input:hover { background: #cccccc; }
+.text-input:focus { background: #fefefe; outline: none; }
+.text-input.error  { background: #efc5c5; color: #f43535; border-color: #f43535; }
+
+.menu-item {
+    display: block;
+    background: var(--surface);
+    color: var(--text);
+    padding: 16px;
+    border-radius: 32px;
+    text-decoration: none;
+    margin-bottom: 8px;
+    font-size: 20px;
+}
+.menu-item:hover { background: #000000; }
+
+.icon-btn.logout { color: var(--text); text-decoration: none; }
+.icon-btn.logout:hover { color: var(--accent); }

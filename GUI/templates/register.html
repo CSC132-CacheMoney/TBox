@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TBox — Vault Registration</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Serif+Display&display=swap');
+
+    :root {
+      --bg:      #1a1a1a;
+      --surface: #1d1d1d;
+      --text:    #f0f0f0;
+      --subtext: #888;
+      --salmon:  #e87070;
+      --input-bg: #f5f5f5;
+      --input-text: #111;
+      --radius-pill: 999px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 28px,
+          rgba(255,255,255,0.018) 28px, rgba(255,255,255,0.018) 29px),
+        repeating-linear-gradient(90deg, transparent, transparent 28px,
+          rgba(255,255,255,0.018) 28px, rgba(255,255,255,0.018) 29px);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      margin: 20px 32px 12px;
+      background: var(--surface);
+      border-radius: var(--radius-pill);
+      height: 72px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      text-decoration: none;
+      color: #fff;
+      z-index: 1;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: #ed7676; }
+    .back-btn svg { width: 28px; height: 28px; fill: currentColor; }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(24px, 3.2vw, 40px);
+      font-weight: 700;
+      color: var(--salmon);
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* ── FORM ── */
+    .form-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 32px 120px;
+      gap: 36px;
+      flex: 1;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .field label {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    /* shared input/select base */
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 13px 18px;
+      border-radius: var(--radius-pill);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      background: var(--input-bg);
+      color: var(--input-text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .field input::placeholder { color: #aaa; }
+    .field input:focus,
+    .field select:focus {
+      border-color: rgba(255,255,255,0.22);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.04);
+    }
+    .field input.error {
+      background: #fdecea;
+      border-color: #c0392b;
+    }
+
+    /* dropdown arrow */
+    .select-wrap {
+      position: relative;
+    }
+    .select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid #666;
+      pointer-events: none;
+    }
+
+    /* ── SUBMIT BUTTON ── */
+    .btn-register {
+      width: 100%;
+      max-width: 480px;
+      padding: 15px 0;
+      border-radius: var(--radius-pill);
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      color: #ddd;
+      background: linear-gradient(180deg, #b00000 0%, #8b0000 100%);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      margin-top: 4px;
+    }
+    .btn-register:hover {
+      background: linear-gradient(180deg, #c00000 0%, #9a0000 100%);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .btn-register:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+
+    /* ── RFID SECTION ── */
+    .rfid-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .btn-rfid {
+      width: 100%;
+      padding: 15px 0;
+      border-radius: var(--radius-pill);
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      color: #ddd;
+      background: linear-gradient(180deg, #b00000 0%, #8b0000 100%);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    }
+    .btn-rfid:hover {
+      background: linear-gradient(180deg, #c00000 0%, #9a0000 100%);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .btn-rfid:active { transform: translateY(1px); }
+    .btn-rfid:disabled {
+      opacity: 0.45;
+      cursor: default;
+      transform: none;
+    }
+
+    .rfid-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--subtext);
+    }
+
+    .rfid-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: #c0392b;
+      box-shadow: 0 0 6px rgba(192,57,43,0.6);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .rfid-dot.scanning {
+      background: #f39c12;
+      box-shadow: 0 0 8px rgba(243,156,18,0.7);
+    }
+    .rfid-dot.initialized {
+      background: #4caf50;
+      box-shadow: 0 0 8px rgba(76,175,80,0.7);
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1d1d1d;
+      border: 1.5px solid rgba(76,175,80,0.3);
+      color: #f0f0f0;
+      padding: 13px 24px;
+      border-radius: 999px;
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.error { border-color: rgba(232,112,112,0.3); }
+    .toast-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4caf50;
+      flex-shrink: 0;
+    }
+    .toast.error .toast-dot { background: #e87070; }
+
+    /* ── INLINE FORM ERROR ── */
+    .form-err {
+      width: 100%;
+      max-width: 480px;
+      font-size: 13px;
+      color: #e74c3c;
+      text-align: center;
+      display: none;
+    }
+    .form-err.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/dashboard" class="back-btn">
+      <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+    </a>
+    <h1>Vault Registration</h1>
+  </header>
+
+  <div class="toast" id="toast">
+    <div class="toast-dot"></div>
+    <span id="toast-msg"></span>
+  </div>
+
+  <div class="form-body">
+
+    <form method="POST" action="/register" id="reg-form"
+          style="display:contents" onsubmit="return validate()">
+
+      <!-- Tool Name -->
+      <div class="field">
+        <label for="tool-name">Tool Name</label>
+        <input
+          type="text"
+          id="tool-name"
+          name="tool_name"
+          placeholder="Name..."
+          autocomplete="off"
+        />
+      </div>
+
+      <!-- Tool Condition -->
+      <div class="field">
+        <label for="tool-condition">Tool Condition</label>
+        <div class="select-wrap">
+          <select id="tool-condition" name="condition">
+            <option value="New">New</option>
+            <option value="Good">Good</option>
+            <option value="Fair">Fair</option>
+            <option value="Poor">Poor</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tool Category -->
+      <div class="field">
+        <label for="tool-category">Tool Category</label>
+        <div class="select-wrap">
+          <select id="tool-category" name="category">
+            <option value="Hand Tool">Hand Tool</option>
+            <option value="Power Tool">Power Tool</option>
+            <option value="Measuring">Measuring</option>
+            <option value="Cutting">Cutting</option>
+            <option value="Fastening">Fastening</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- RFID Initializer -->
+      <input type="hidden" name="rfid_tag" id="rfid-tag-value" value="">
+      <div class="rfid-section">
+        <button type="button" class="btn-rfid" id="btn-rfid" onclick="initRfid()">
+          Assign RFID value
+        </button>
+        <div class="rfid-status">
+          <div class="rfid-dot" id="rfid-dot"></div>
+          <span id="rfid-label">RFID Reader is uninitialized</span>
+        </div>
+        <span id="rfid-uid" style="font-size:12px;color:#555;font-family:monospace;display:none"></span>
+      </div>
+
+      <p class="form-err" id="form-error"></p>
+
+      <button type="submit" class="btn-register">Register Tool</button>
+
+    </form>
+
+  </div>
+
+  <script>
+    /* ── TOAST SYSTEM ── */
+    let toastTimer = null;
+    function showToast(message, type = "success") {
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = message;
+      toast.classList.toggle("error", type === "error");
+      clearTimeout(toastTimer);
+      toast.classList.add("show");
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 4000);
+    }
+
+    /* ── RFID INITIALIZER ── */
+    let rfidInitialized = false;
+    let rfidPollInterval = null;
+
+    function initRfid() {
+      const btn   = document.getElementById("btn-rfid");
+      const dot   = document.getElementById("rfid-dot");
+      const label = document.getElementById("rfid-label");
+
+      btn.disabled    = true;
+      btn.textContent = "Initializing…";
+      dot.className   = "rfid-dot scanning";
+      label.textContent = "Initializing reader…";
+
+      fetch("/register/rfid/init", { method: "POST" })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            label.textContent = "Tap new RFID sticker to reader…";
+            startRfidPoll();
+          } else {
+            resetRfidBtn("Initialization failed — try again");
+            showToast("Reader initialization failed", "error");
+          }
+        })
+        .catch(() => {
+          resetRfidBtn("Could not reach reader — try again");
+          showToast("Could not reach reader", "error");
+        });
+    }
+
+    function startRfidPoll() {
+      rfidPollInterval = setInterval(() => {
+        fetch("/register/rfid/poll")
+          .then(r => r.json())
+          .then(data => {
+            if (data.tag) {
+              clearInterval(rfidPollInterval);
+              onTagWritten(data.tag, data.uid);
+            } else if (data.error) {
+              clearInterval(rfidPollInterval);
+              resetRfidBtn("Reader disconnected — try again");
+              showToast(data.error, "error");
+            }
+          })
+          .catch(() => clearInterval(rfidPollInterval));
+      }, 500);
+    }
+
+    function onTagWritten(tag, uid) {
+      rfidInitialized = true;
+      document.getElementById("rfid-tag-value").value = tag;
+      const btn   = document.getElementById("btn-rfid");
+      const dot   = document.getElementById("rfid-dot");
+      const label = document.getElementById("rfid-label");
+      const uidEl = document.getElementById("rfid-uid");
+
+      btn.textContent   = "RFID Reader is initialized";
+      dot.className     = "rfid-dot initialized";
+      label.textContent = "Tag assigned";
+      if (uid) {
+        uidEl.textContent    = "UID: " + uid;
+        uidEl.style.display  = "block";
+      }
+      showToast("RFID tag assigned", "success");
+    }
+
+    function resetRfidBtn(msg) {
+      const btn   = document.getElementById("btn-rfid");
+      const dot   = document.getElementById("rfid-dot");
+      const label = document.getElementById("rfid-label");
+      btn.disabled    = false;
+      btn.textContent = "Assign RFID value";
+      dot.className   = "rfid-dot";
+      label.textContent = msg;
+    }
+
+    /* ── FORM VALIDATION ── */
+    function validate() {
+      const nameEl = document.getElementById("tool-name");
+      const errEl  = document.getElementById("form-error");
+
+      if (!nameEl.value.trim()) {
+        nameEl.classList.add("error");
+        errEl.textContent = "Please enter a tool name.";
+        errEl.classList.add("visible");
+        showToast("Please enter a tool name.", "error");
+        return false;
+      }
+
+      nameEl.classList.remove("error");
+      errEl.classList.remove("visible");
+      showToast("Tool registered successfully!", "success");
+      return true;
+    }
+
+    document.getElementById("tool-name").addEventListener("input", function () {
+      this.classList.remove("error");
+      document.getElementById("form-error").classList.remove("visible");
+    });
+
+    /* ── Flask flash messages → toasts ── */
+    // Jinja2 injects flash messages as JS calls at page load
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        showToast("{{ message }}", "{{ 'success' if category == 'success' else 'error' }}");
+      {% endfor %}
+    {% endwith %}
+  </script>
+
+</body>
+</html>
