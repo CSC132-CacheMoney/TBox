@@ -183,6 +183,8 @@
       background: #4caf50;
       flex-shrink: 0;
     }
+    .toast.error { border-color: rgba(232,112,112,0.3); }
+    .toast.error .toast-dot { background: #e87070; }
 
     /* ── ERROR MESSAGE ── */
     .error-msg {
@@ -248,9 +250,10 @@
     });
 
     let toastTimer = null;
-    function showToast(msg) {
+    function showToast(msg, type = 'success') {
       const toast = document.getElementById('toast');
-      document.getElementById('toast-msg').textContent = msg + ' returned';
+      document.getElementById('toast-msg').textContent = type === 'success' ? msg + ' returned' : msg;
+      toast.classList.toggle('error', type === 'error');
       clearTimeout(toastTimer);
       toast.classList.add('show');
       toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
@@ -258,6 +261,7 @@
 
     const es = new EventSource('/login/events');
     es.onmessage = e => showToast(e.data);
+    es.addEventListener('rfid-error', e => showToast(e.data, 'error'));
   </script>
 
 </body>

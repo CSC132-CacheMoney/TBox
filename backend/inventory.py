@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+import threading
 import database
 from alerts import SMTPServer
 import pico_Reader
@@ -59,8 +60,9 @@ def checkout():
     for tool_id in tool_ids:
         try:
             database.checkout_tool(tool_id, session["user"])
-            succeeded.append(database.get_tool_by_id(tool_id)["name"])
-            succeeded.append(tool_id)
+            name = database.get_tool_by_id(tool_id)["name"]
+            succeeded.append(name)
+            threading.Thread(target=Notify.send_checked_out, args=(name,), daemon=True).start()
         except ValueError as e:
             failed.append(str(e))
 
@@ -68,8 +70,6 @@ def checkout():
         flash(f"{len(succeeded)} tool(s) checked out to {session['user']}.", "success")
     for msg in failed:
         flash(msg, "error")
-    
-    Notify.send_checked_out(succeeded)
     
     return redirect(url_for("inventory.inventory"))
 

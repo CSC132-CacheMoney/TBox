@@ -76,19 +76,39 @@
       pointer-events: none;
     }
 
-    /* ── FLASH MESSAGES ── */
-    .flash-list {
-      list-style: none;
-      padding: 0 32px 8px;
-    }
-    .flash-list li {
-      padding: 10px 20px;
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1d1d1d;
+      border: 1.5px solid rgba(76,175,80,0.3);
+      color: #f0f0f0;
+      padding: 13px 24px;
       border-radius: 999px;
-      font-size: 13px;
-      margin-bottom: 6px;
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    .flash-list li.success { background: rgba(76,175,80,0.12); color: #4caf50; border: 1px solid rgba(76,175,80,0.2); }
-    .flash-list li.error   { background: rgba(232,112,112,0.12); color: var(--salmon); border: 1px solid rgba(232,112,112,0.2); }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.error { border-color: rgba(232,112,112,0.3); }
+    .toast-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4caf50;
+      flex-shrink: 0;
+    }
+    .toast.error .toast-dot { background: #e87070; }
 
     /* ── MAIN CONTENT ── */
     .content {
@@ -398,16 +418,10 @@
     <h1>Tool Retirement / Replacement</h1>
   </header>
 
-  <!-- FLASH MESSAGES (Flask) -->
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <ul class="flash-list">
-        {% for category, message in messages %}
-          <li class="{{ category }}">{{ message }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  {% endwith %}
+  <div class="toast" id="toast">
+    <div class="toast-dot"></div>
+    <span id="toast-msg"></span>
+  </div>
 
   <!-- MAIN -->
   <div class="content">
@@ -453,19 +467,14 @@
       <button class="popup-close" onclick="closePopup()">✕</button>
       <div class="popup-title">Replace RFID Tag</div>
       <p class="popup-sub" id="popup-sub">
-        Initialize the RFID reader, then tap a new sticker to the reader to assign it to
+        Tap a new RFID sticker to the reader to assign it to
         <strong id="popup-tool-name">—</strong>.
       </p>
 
-      <!-- Init button + status row -->
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <button class="btn-init-rfid" id="btn-init-rfid" onclick="initRfidReader()">
-          Initialize RFID Reader
-        </button>
-        <div class="rfid-status">
-          <div class="rfid-dot" id="rfid-dot"></div>
-          <span id="rfid-status-text">Reader not initialized</span>
-        </div>
+      <!-- Status row -->
+      <div class="rfid-status">
+        <div class="rfid-dot" id="rfid-dot"></div>
+        <span id="rfid-status-text">Initializing reader…</span>
       </div>
 
       <!-- Tap zone -->
@@ -478,10 +487,6 @@
       <!-- Footer buttons -->
       <div class="popup-footer">
         <button class="btn-popup-cancel" onclick="closePopup()">Cancel</button>
-        <button class="btn-popup-confirm" id="btn-confirm-replace" disabled
-                onclick="submitReplace()">
-          Assign Tag
-        </button>
       </div>
     </div>
   </div>
@@ -599,6 +604,7 @@
       document.getElementById("popup-tool-name").textContent = selectedTool.name;
       resetPopupState();
       document.getElementById("overlay").classList.add("open");
+      initRfidReader();
     }
 
     function closePopup() {
@@ -616,36 +622,27 @@
       newRfidValue    = null;
       stopRfidPolling();
 
-      const dot  = document.getElementById("rfid-dot");
-      const txt  = document.getElementById("rfid-status-text");
-      const btn  = document.getElementById("btn-init-rfid");
-      const zone = document.getElementById("tap-zone");
-      const tapTxt   = document.getElementById("tap-zone-text");
-      const tagVal   = document.getElementById("new-tag-value");
-      const confirm_ = document.getElementById("btn-confirm-replace");
+      const dot    = document.getElementById("rfid-dot");
+      const txt    = document.getElementById("rfid-status-text");
+      const zone   = document.getElementById("tap-zone");
+      const tapTxt = document.getElementById("tap-zone-text");
+      const tagVal = document.getElementById("new-tag-value");
 
-      dot.className      = "rfid-dot";
-      txt.textContent    = "Reader not initialized";
-      btn.textContent    = "Initialize RFID Reader";
-      btn.classList.remove("initialized");
-      btn.disabled       = false;
-      zone.className     = "tap-zone";
-      tapTxt.textContent = "Waiting for reader…";
+      dot.className        = "rfid-dot";
+      txt.textContent      = "Initializing reader…";
+      zone.className       = "tap-zone";
+      tapTxt.textContent   = "Waiting for reader…";
       tagVal.style.display = "none";
       tagVal.textContent   = "";
-      confirm_.disabled    = true;
     }
 
     function initRfidReader() {
       if (!selectedTool) return;
-      const btn    = document.getElementById("btn-init-rfid");
       const dot    = document.getElementById("rfid-dot");
       const txt    = document.getElementById("rfid-status-text");
       const zone   = document.getElementById("tap-zone");
       const tapTxt = document.getElementById("tap-zone-text");
 
-      btn.disabled    = true;
-      btn.textContent = "Initializing…";
       dot.className   = "rfid-dot scanning";
       txt.textContent = "Initializing reader…";
 
@@ -660,23 +657,21 @@
             rfidInitialized = true;
             dot.className      = "rfid-dot ready";
             txt.textContent    = "Ready — tap new sticker to reader";
-            btn.textContent    = "Reader Ready";
-            btn.classList.add("initialized");
             zone.className     = "tap-zone active";
             tapTxt.textContent = "Tap new RFID sticker to reader…";
             startRfidPolling();
           } else {
-            dot.className      = "rfid-dot";
-            txt.textContent    = data.msg || "Initialization failed — try again";
-            btn.textContent    = "Initialize RFID Reader";
-            btn.disabled       = false;
+            showToast(data.msg || "Initialization failed — retrying…", 'error');
+            dot.className   = "rfid-dot";
+            txt.textContent = "Initialization failed — retrying…";
+            setTimeout(initRfidReader, 2000);
           }
         })
         .catch(() => {
-          dot.className      = "rfid-dot";
-          txt.textContent    = "Could not reach reader — try again";
-          btn.textContent    = "Initialize RFID Reader";
-          btn.disabled       = false;
+          showToast("Could not reach reader — retrying…", 'error');
+          dot.className   = "rfid-dot";
+          txt.textContent = "Could not reach reader — retrying…";
+          setTimeout(initRfidReader, 2000);
         });
     }
 
@@ -688,6 +683,10 @@
             if (data.tag) {
               stopRfidPolling();
               onTagDetected(data.tag);
+            } else if (data.error) {
+              stopRfidPolling();
+              showToast(data.error, 'error');
+              resetRfidUI();
             }
           })
           .catch(() => stopRfidPolling());
@@ -701,18 +700,34 @@
       }
     }
 
+    function resetRfidUI() {
+      const dot    = document.getElementById("rfid-dot");
+      const txt    = document.getElementById("rfid-status-text");
+      const zone   = document.getElementById("tap-zone");
+      const tapTxt = document.getElementById("tap-zone-text");
+      const tagVal = document.getElementById("new-tag-value");
+      rfidInitialized = false;
+      newRfidValue = null;
+      dot.className        = "rfid-dot";
+      txt.textContent      = "Reader disconnected — retrying…";
+      zone.className       = "tap-zone";
+      tapTxt.textContent   = "Waiting for reader…";
+      tagVal.style.display = "none";
+      tagVal.textContent   = "";
+      setTimeout(initRfidReader, 2000);
+    }
+
     function onTagDetected(tag) {
       newRfidValue = tag;
-      const zone    = document.getElementById("tap-zone");
-      const tapTxt  = document.getElementById("tap-zone-text");
-      const tagVal  = document.getElementById("new-tag-value");
-      const confirm_ = document.getElementById("btn-confirm-replace");
+      const zone   = document.getElementById("tap-zone");
+      const tapTxt = document.getElementById("tap-zone-text");
+      const tagVal = document.getElementById("new-tag-value");
 
-      zone.className     = "tap-zone success-flash";
-      tapTxt.textContent = "Tag detected!";
-      tagVal.textContent = tag;
+      zone.className       = "tap-zone success-flash";
+      tapTxt.textContent   = "Tag detected!";
+      tagVal.textContent   = tag;
       tagVal.style.display = "block";
-      confirm_.disabled  = false;
+      submitReplace();
     }
 
     function submitReplace() {
@@ -729,6 +744,24 @@
     flaskTools = {{ tools | tojson }};
   </script>
   {% endif %}
+
+  <script>
+    let toastTimer = null;
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      toast.classList.toggle('error', type === 'error');
+      clearTimeout(toastTimer);
+      toast.classList.add('show');
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        showToast("{{ message }}", "{{ 'success' if category == 'success' else 'error' }}");
+      {% endfor %}
+    {% endwith %}
+  </script>
 
 </body>
 </html>

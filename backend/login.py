@@ -61,36 +61,51 @@ def login():
  
  
 def rfid_polling_worker():
-    with RFIDBridge("/dev/ttyACM0") as rfid:
+    last_uid = None
+    while not _stop_rfid.is_set():
         try:
-            response = rfid.ping()
-            if response:
-                print ('[RFID] Started')
-                
-        except:
-            print ('[RFID] err')
-            
-        while not _stop_rfid.is_set():
-            try:
-                tag_UID = rfid.scan()
-                print("UID:", tag_UID['uid'])
-                tool_id = rfid.read_block(4).rstrip(b'\x00').decode()
-                if tool_id:
-                    print(f"[SCAN] Tag detected on login screen: {tool_id}")
-                    tool = database.get_tool_by_rfid(tool_id)
-                    if tool:
-                        database.return_tool(tool["id"])
-                        print(f'[DATABASE] Tool returned: {tool["name"]}')
-                        Notify.send_checked_in(tool["name"])
-                        _toast_queue.put(tool["name"])
-                    else:
-                        print(f'[DATABASE] No valid tag {tool_id}!')
-                    time.sleep(2)
-            except RFIDBridgeError as e:
-                if "No tag" in str(e):
-                    time.sleep(0.2)
-                    continue
-                raise
+            with RFIDBridge("/dev/ttyACM0") as rfid:
+                try:
+                    if rfid.ping():
+                        print('[RFID] Started')
+                except Exception:
+                    print('[RFID] err')
+
+                while not _stop_rfid.is_set():
+                    try:
+                        tag_UID = rfid.scan()
+                        uid = tag_UID['uid']
+                        if uid == last_uid:
+                            time.sleep(0.2)
+                            continue
+                        print("UID:", uid)
+                        tool_id = rfid.read_block(4).rstrip(b'\x00').decode()
+                        if tool_id:
+                            print(f"[SCAN] Tag detected on login screen: {tool_id}")
+                            tool = database.get_tool_by_rfid(tool_id)
+                            if tool:
+                                database.return_tool(tool["id"])
+                                print(f'[DATABASE] Tool returned: {tool["name"]}')
+                                try:
+                                    Notify.send_checked_in(tool["name"])
+                                except Exception as e:
+                                    print(f"[RFID] Alert failed: {e}")
+                                _toast_queue.put(("return", tool["name"]))
+                            else:
+                                print(f'[DATABASE] No valid tag {tool_id}!')
+                        last_uid = uid
+                        time.sleep(2)
+                    except RFIDBridgeError as e:
+                        if "No tag" in str(e):
+                            last_uid = None
+                            time.sleep(0.2)
+                            continue
+                        raise
+        except Exception as e:
+            print(f"[RFID] Connection error: {e}")
+            if not _stop_rfid.is_set():
+                _toast_queue.put(("error", "RFID reader disconnected — tap again to retry"))
+                time.sleep(1)
 
 _stop_rfid = threading.Event()
 _toast_queue: queue.SimpleQueue = queue.SimpleQueue()
@@ -101,8 +116,11 @@ def login_events():
     def stream():
         while True:
             try:
-                name = _toast_queue.get(timeout=25)
-                yield f"data: {name}\n\n"
+                kind, msg = _toast_queue.get(timeout=25)
+                if kind == "error":
+                    yield f"event: rfid-error\ndata: {msg}\n\n"
+                else:
+                    yield f"data: {msg}\n\n"
             except queue.Empty:
                 yield ": keepalive\n\n"
     return Response(stream(), mimetype="text/event-stream",

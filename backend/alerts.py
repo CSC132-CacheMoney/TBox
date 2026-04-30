@@ -62,7 +62,12 @@ class SMTPServer:
         email["Subject"] = subject
         email["From"] = from_addr
         email["To"] = ", ".join(to_addrs)
-        self._smtp.send_message(email, from_addr=from_addr, to_addrs=to_addrs)
+        try:
+            self._smtp.send_message(email, from_addr=from_addr, to_addrs=to_addrs)
+        except smtplib.SMTPServerDisconnected:
+            self._smtp = None
+            self._connect()
+            self._smtp.send_message(email, from_addr=from_addr, to_addrs=to_addrs)
 
 # ------------------------------------------------
 
@@ -77,6 +82,9 @@ class SMTPServer:
 
     def send_retired(self, toolName: str):
         self._send(f"A tool: <{toolName}> has been retired from ToolVault.", "Tool Retired")
+
+# ------------------------------------------------
+server = SMTPServer()
 
 # ------------------------------------------------
 def initialize_alerts():

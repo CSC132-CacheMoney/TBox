@@ -8,12 +8,13 @@ from pico_Reader import RFIDBridge, RFIDBridgeError
 retire_bp = Blueprint("retire", __name__)
 
 _rfid_stop   = threading.Event()
-_rfid_result = {"tag": None}   # written by worker, read by poll endpoint
+_rfid_result = {"tag": None, "error": None}
 _rfid_worker = threading.Thread()
 
 
 def _rfid_write_worker(tag_to_write: str):
     _rfid_result["tag"] = None
+    _rfid_result["error"] = None
     try:
         with RFIDBridge("/dev/ttyACM0") as rfid:
             while not _rfid_stop.is_set():
@@ -29,6 +30,7 @@ def _rfid_write_worker(tag_to_write: str):
                     raise
     except Exception as e:
         print(f"[RFID WRITE] {e}")
+        _rfid_result["error"] = "Reader disconnected — initialize and try again"
 
 
 @retire_bp.route("/rfid/init", methods=["POST"])
@@ -55,7 +57,7 @@ def rfid_init():
 def rfid_poll():
     if "user" not in session:
         return jsonify({"tag": None}), 401
-    return jsonify({"tag": _rfid_result["tag"]})
+    return jsonify({"tag": _rfid_result["tag"], "error": _rfid_result["error"]})
 
 
 @retire_bp.route("/replace", methods=["POST"])
@@ -110,7 +112,7 @@ def retire_tool():
                 f"Tool retired: {retired_name}.",
                 "success"
             )
-            alerts.server.retired(retired_name)
+            threading.Thread(target=alerts.server.send_retired, args=(retired_name,), daemon=True).start()
 
         return redirect(url_for("inventory.inventory"))
 
