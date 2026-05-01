@@ -55,7 +55,7 @@ The system pairs a Python backend with a clean HTML/CSS web GUI, allowing users 
 │         Flask/FastAPI · Business Logic · Alerts         │
 │         Checkout Timer · Configuration Manager          │
 └────────────────────────┬────────────────────────────────┘
-                         │ Serial / GPIO
+                         │ Serial / USB
 ┌────────────────────────▼────────────────────────────────┐
 │                   Hardware Layer                        │
 │              RFID Reader · RFID Tag Stickers            │
@@ -83,8 +83,9 @@ ToolVault/
 │   ├── config.py             # Configuration manager
 │   └── database.py           # SQLite database interface
 │
-├── gui/
-│   ├── index.html            # Main dashboard / inventory view
+├── GUI/
+│   ├── dashboard.html            # Main dashboard / inventory view
+│   ├── login.html         # Checkout & check-in page
 │   ├── checkout.html         # Checkout & check-in page
 │   ├── register.html         # Tool registration page
 │   ├── retire.html           # Tool retirement page
@@ -94,7 +95,7 @@ ToolVault/
 │       └── components.css    # Reusable UI components
 │
 ├── data/
-│   └── tools.db              # SQLite database (auto-generated)
+│   └── tools.db              # SQLite database (auto-generated at first launch)
 │
 ├── config/
 │   └── settings.json         # Default configuration file
@@ -112,12 +113,12 @@ ToolVault/
 
 ## 🛠️ Hardware Requirements
 
-- **RFID Reader** — RC522 or compatible module (SPI interface)
-- **Microcontroller / SBC** — Raspberry Pi (recommended) or any device with GPIO/serial support
+- **RFID Reader** — Any RFID reader presented as a USB serial device and can read/write 13.56 MHz NFC tags
+- **Microcontroller / SBC** — Any device which includes USB ports
 - **RFID Stickers / Tags** — 13.56 MHz MIFARE tags (one per tool)
-- **Host Machine** — Any machine capable of running Python 3.10+
+- **Host Machine** — Any machine capable of running Python 3.10+ (Not tested on MacOS)
 
-> **Note:** The GUI runs in any modern web browser, making it accessible from any device on the same network.
+> **Note:** The GUI runs in any modern web browser, making it accessible from any device on the same network(Built for desktop-like devices, mobile devices should work but no testing was done.).
 
 ---
 
@@ -126,7 +127,7 @@ ToolVault/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/cache-money/toolvault.git
+git clone https://github.com/cache-money/TBox.git
 cd toolvault
 ```
 
@@ -156,19 +157,13 @@ Edit `config/settings.json` to match your RFID reader's connection details:
 }
 ```
 
-### 4. Initialize the Database
-
-```bash
-python backend/database.py --init
-```
-
-### 5. Run the Application
+### 4. Run the Application
 
 ```bash
 python backend/main.py
 ```
 
-Then open your browser and navigate to `http://localhost:5000` to access the GUI.
+Then open your browser and navigate to `http://localhost:6767` or `http://127.0.0.0:6767` to access the GUI.
 
 ---
 
@@ -196,10 +191,10 @@ Configure the checkout time limit, alert preferences, and other system settings 
 ToolVault monitors all active checkouts in the background. When a tool exceeds the configured checkout duration, an alert is triggered.
 
 **Configurable options:**
-- `checkout_limit_minutes` — How long a tool can be checked out before an alert fires
+- `checkout_limit_hours` — How long a tool can be checked out before an alert fires
 - `alert_method` — Where alerts are sent (`console`, `email`, or future integrations)
 
-Alerts include the tool name, RFID tag ID, checkout time, and how overdue it is.
+Alerts include the tool name, checkout time, and how overdue it is.
 
 ---
 
@@ -214,10 +209,10 @@ python -m pytest tests/
 ## 📋 Requirements
 
 ```
-flask>=2.3.0
-mfrc522>=0.0.7
-RPi.GPIO>=0.7.1
+flask
 sqlite3
+pyserial
+RPi.GPIO>=0.7.1
 pytest>=7.0.0
 ```
 
