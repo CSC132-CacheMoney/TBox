@@ -5,6 +5,7 @@ from pico_Reader import RFIDBridge, RFIDBridgeError
 import time
 import threading
 import queue
+from audio import play_startup
 
  
 login_bp = Blueprint("login", __name__)
@@ -41,9 +42,10 @@ def login():
             print("[DEBUG] RFID Reader offline. Attempting re-initialization...")
             # Optional: logic to try opening the port again if it dropped
  """
-    error = None 
- 
-    if request.method == "POST":
+    error = None
+    if request.method == "GET":
+        play_startup()
+    elif request.method == "POST":
         username = request.form.get("username", "").strip().lower().capitalize()
  
         # Validate: 2–10 characters (matches design's TextBox validation)
