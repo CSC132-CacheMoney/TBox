@@ -1,13 +1,13 @@
-from winsound import PlaySound, SND_FILENAME, SND_ASYNC
-from os.path import join
+# audio.py
+# 
+# Loki Nordstrom 
 
-collection = {
-    "startup": join("assets", "sound_startup.wav"),
-    "interface": join("assets", "sound_interface.wav")
-}
+
+from winsound import PlaySound, SND_FILENAME, SND_ASYNC
+
 
 def play_startup():
-    PlaySound(collection["startup"], SND_FILENAME | SND_ASYNC)
+    PlaySound("assets/sound_startup.wav", SND_FILENAME | SND_ASYNC)
 
 def play_interface():
-    PlaySound(collection["interface"], SND_FILENAME | SND_ASYNC)
+    PlaySound("assets/sound_interface.wav", SND_FILENAME | SND_ASYNC)
