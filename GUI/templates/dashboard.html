@@ -1,16 +1,436 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>TBox - Dashboard</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
-</head>
-<body class="screen">
-  <a href="/logout" class="icon-btn logout">&#x2192; Logout</a>
-  <h1>Welcome, {{ user }}</h1>
-  <nav class="menu">
-    <a href="/inventory" class="menu-item">📦 Inventory</a>
-    <a href="/register"  class="menu-item">➕ Register Tool</a>
-    <a href="/retire"    class="menu-item">🗑️ Retire Tool</a>
-  </nav>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}TBox — Dashboard{% endblock %}
+
+{% block extra_styles %}
+<style>
+  main { padding: 28px 32px; max-width: 1440px; margin: 0 auto; flex: 1; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
+
+  /* ── STAT CARDS ──────────────────────────────────────────────── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--top-line, transparent);
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    margin-bottom: 10px;
+  }
+  .stat-num {
+    font-size: 44px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -2px;
+    margin-bottom: 10px;
+  }
+  .stat-sub { font-size: 13px; color: var(--muted); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 600;
+    padding: 3px 9px; border-radius: 20px;
+  }
+  .pill-green  { background: rgba(74,222,128,0.12);  color: var(--green); }
+  .pill-red    { background: rgba(237,118,118,0.12); color: var(--accent); }
+  .pill-gray   { background: rgba(74,82,104,0.25);   color: var(--muted); }
+
+  .gauge-wrap { position: relative; height: 64px; margin-bottom: 6px; }
+
+  /* ── CHARTS ROW ──────────────────────────────────────────────── */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 0.85fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 22px 24px;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .card-sub   { font-size: 12px; color: var(--muted); }
+
+  .canvas-wrap { position: relative; }
+
+  .legend { margin-top: 16px; display: flex; flex-direction: column; gap: 9px; }
+  .legend-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+  .legend-left { display: flex; align-items: center; gap: 8px; color: #ccc; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .legend-right { display: flex; align-items: baseline; gap: 4px; }
+  .legend-val { font-weight: 600; color: var(--text); }
+  .legend-pct { font-size: 11px; color: var(--muted); }
+
+  .longest-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; text-align: center; padding: 24px 0; }
+  .longest-tool  { font-size: 22px; font-weight: 700; margin-bottom: 3px; }
+  .longest-user  { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .longest-dur   { font-size: 38px; font-weight: 700; color: var(--accent); letter-spacing: -1.5px; margin-bottom: 2px; }
+  .longest-since { font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+
+  .progress-track { background: rgba(255,255,255,0.06); border-radius: 4px; height: 5px; overflow: hidden; margin-bottom: 5px; }
+  .progress-fill  { height: 100%; border-radius: 4px; transition: width 1s ease; }
+  .progress-ref   { font-size: 11px; color: var(--muted); }
+
+  /* ── ACTIVITY LOG ────────────────────────────────────────────── */
+  .activity-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 22px 24px;
+  }
+
+  .live-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--green); }
+  .live-dot   { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: live-blink 2s ease infinite; }
+  @keyframes live-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+  .log-list { display: flex; flex-direction: column; gap: 2px; max-height: 340px; overflow-y: auto; }
+  .log-list::-webkit-scrollbar { width: 4px; }
+  .log-list::-webkit-scrollbar-track { background: transparent; }
+  .log-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+  .log-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 11px 12px; border-radius: 10px;
+    transition: background 0.12s;
+    animation: log-in 0.28s ease;
+  }
+  .log-item:hover { background: rgba(255,255,255,0.035); }
+  @keyframes log-in { from{opacity:0;transform:translateY(-7px)} to{opacity:1;transform:none} }
+
+  .log-icon {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
+  }
+  .icon-checkout { background: rgba(237,118,118,0.12); color: var(--accent); }
+  .icon-return   { background: rgba(74,222,128,0.12);  color: var(--green); }
+  .icon-login    { background: rgba(91,158,255,0.12);  color: var(--blue); }
+
+  .log-body  { flex: 1; }
+  .log-text  { font-size: 14px; color: #ccc; line-height: 1.4; }
+  .log-text strong { color: var(--text); }
+  .log-time  { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .log-empty { text-align: center; color: var(--muted); font-size: 14px; padding: 36px; }
+
+  @media (max-width: 1100px) {
+    .stats-row  { grid-template-columns: repeat(2,1fr); }
+    .charts-row { grid-template-columns: 1fr 1fr; }
+    .charts-row .card:last-child { grid-column: 1/-1; }
+  }
+  @media (max-width: 680px) {
+    main { padding: 16px; }
+    .stats-row  { grid-template-columns: 1fr 1fr; }
+    .charts-row { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main>
+
+  <div class="section-label">Overview</div>
+  <div class="stats-row">
+
+    <div class="stat-card" style="--top-line:linear-gradient(90deg,var(--blue),transparent);">
+      <div class="stat-label">Total Tools</div>
+      <div class="stat-num" id="s-active">{{ stats.active }}</div>
+      <div class="stat-sub"><span class="pill pill-gray">{{ stats.retired }} retired</span></div>
+    </div>
+
+    <div class="stat-card" style="--top-line:linear-gradient(90deg,var(--accent),transparent);">
+      <div class="stat-label">Checked Out</div>
+      <div class="stat-num" id="s-out">{{ stats.checked_out }}</div>
+      <div class="stat-sub">
+        <span class="pill pill-red" id="pct-out">
+          {% if stats.active > 0 %}{{ ((stats.checked_out / stats.active)*100)|round|int }}{% else %}0{% endif %}% of active
+        </span>
+      </div>
+    </div>
+
+    <div class="stat-card" style="--top-line:linear-gradient(90deg,var(--green),transparent);">
+      <div class="stat-label">Available</div>
+      <div class="stat-num" id="s-avail">{{ stats.available }}</div>
+      <div class="stat-sub">
+        <span class="pill pill-green" id="pct-avail">
+          {% if stats.active > 0 %}{{ ((stats.available / stats.active)*100)|round|int }}{% else %}0{% endif %}% of active
+        </span>
+      </div>
+    </div>
+
+    <div class="stat-card" style="--top-line:linear-gradient(90deg,var(--yellow),transparent);">
+      <div class="stat-label">Utilization</div>
+      <div class="stat-num" id="s-util">
+        {% if stats.active > 0 %}{{ ((stats.checked_out / stats.active)*100)|round|int }}{% else %}0{% endif %}%
+      </div>
+      <div class="gauge-wrap"><canvas id="gaugeChart"></canvas></div>
+      <div class="stat-sub">tools currently in use</div>
+    </div>
+
+  </div>
+
+  <div class="section-label">Analytics</div>
+  <div class="charts-row">
+
+    <div class="card">
+      <div class="card-header"><div class="card-title">Tool Status</div></div>
+      <div class="canvas-wrap" style="height:180px;"><canvas id="statusChart"></canvas></div>
+      <div class="legend">
+        <div class="legend-row">
+          <div class="legend-left"><span class="dot" style="background:var(--green);"></span>Available</div>
+          <div class="legend-right">
+            <span class="legend-val" id="l-avail">{{ stats.available }}</span>
+            <span class="legend-pct" id="l-avail-pct">({% if stats.active > 0 %}{{ ((stats.available/stats.active)*100)|round|int }}{% else %}0{% endif %}%)</span>
+          </div>
+        </div>
+        <div class="legend-row">
+          <div class="legend-left"><span class="dot" style="background:var(--accent);"></span>Checked Out</div>
+          <div class="legend-right">
+            <span class="legend-val" id="l-out">{{ stats.checked_out }}</span>
+            <span class="legend-pct" id="l-out-pct">({% if stats.active > 0 %}{{ ((stats.checked_out/stats.active)*100)|round|int }}{% else %}0{% endif %}%)</span>
+          </div>
+        </div>
+        <div class="legend-row">
+          <div class="legend-left"><span class="dot" style="background:var(--retired);"></span>Retired</div>
+          <div class="legend-right"><span class="legend-val" id="l-ret">{{ stats.retired }}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Weekly Checkouts</div>
+        <div class="card-sub">Last 7 days</div>
+      </div>
+      <div class="canvas-wrap" style="height:220px;"><canvas id="weeklyChart"></canvas></div>
+    </div>
+
+    <div class="card" style="display:flex;flex-direction:column;">
+      <div class="card-header" style="margin-bottom:12px;">
+        <div class="card-title">Longest Active Checkout</div>
+      </div>
+      {% if longest %}
+        <div class="longest-tool">{{ longest.tool_name }}</div>
+        <div class="longest-user">checked out by {{ longest.user_name }}</div>
+        <div class="longest-dur" id="longest-dur">{{ longest.duration }}</div>
+        <div class="longest-since">since {{ longest.checked_out_at[:16].replace('T',' ') }}</div>
+        <div class="progress-track">
+          <div class="progress-fill" id="longest-bar"
+               style="width:{{ longest.bar_pct }}%;
+                      background:{% if longest.bar_pct < 50 %}var(--green){% elif longest.bar_pct < 80 %}var(--yellow){% else %}var(--accent){% endif %};"></div>
+        </div>
+        <div class="progress-ref">24-hour checkout limit reference</div>
+      {% else %}
+        <div class="longest-empty">All tools are available</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <div class="section-label">Live Activity</div>
+  <div class="activity-card">
+    <div class="card-header">
+      <div class="card-title">Recent Events</div>
+      <div class="live-badge"><div class="live-dot"></div>Live</div>
+    </div>
+    <div class="log-list" id="log-list">
+      {% for e in activity %}
+        <div class="log-item">
+          <div class="log-icon {% if e.type=='checkout' %}icon-checkout{% elif e.type=='return' %}icon-return{% else %}icon-login{% endif %}">
+            {% if e.type=='checkout' %}&#8594;{% elif e.type=='return' %}&#8592;{% else %}&#10003;{% endif %}
+          </div>
+          <div class="log-body">
+            <div class="log-text">
+              {% if e.type == 'checkout' %}<strong>{{ e.user_name }}</strong> checked out <strong>{{ e.tool_name }}</strong>
+              {% elif e.type == 'return' %}<strong>{{ e.user_name }}</strong> returned <strong>{{ e.tool_name }}</strong>
+              {% else %}<strong>{{ e.user_name }}</strong> logged in{% endif %}
+            </div>
+          </div>
+          <div class="log-time" data-ts="{{ e.event_time }}">{{ e.event_time[:16].replace('T',' ') }}</div>
+        </div>
+      {% else %}
+        <div class="log-empty" id="log-empty">No activity recorded yet</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const STATS  = {{ stats  | tojson }};
+const WEEKLY = {{ weekly | tojson }};
+
+Chart.defaults.color = '#8891a5';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+const centerPlugin = {
+  id: 'center',
+  afterDraw(chart) {
+    const o = chart.config.options.center;
+    if (!o) return;
+    const {top,bottom,left,right} = chart.chartArea;
+    const cx = (left+right)/2, cy = (top+bottom)/2;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f0f0f0';
+    ctx.font = `bold 26px 'DM Sans', sans-serif`;
+    ctx.fillText(o.value, cx, cy - 9);
+    ctx.font = `11px 'DM Sans', sans-serif`;
+    ctx.fillStyle = '#8891a5';
+    ctx.fillText(o.label, cx, cy + 12);
+    ctx.restore();
+  }
+};
+Chart.register(centerPlugin);
+
+const statusChart = new Chart(document.getElementById('statusChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Available','Checked Out','Retired'],
+    datasets: [{ data: [STATS.available, STATS.checked_out, STATS.retired], backgroundColor: ['#4ade80','#ed7676','#4a5268'], borderWidth: 0, hoverOffset: 6 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '68%',
+    plugins: { legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw}`}}, center:{value:STATS.active, label:'active'} }
+  }
+});
+
+const utilPct = STATS.active > 0 ? Math.round((STATS.checked_out / STATS.active) * 100) : 0;
+const gaugeChart = new Chart(document.getElementById('gaugeChart'), {
+  type: 'doughnut',
+  data: { datasets: [{ data: [utilPct, 100-utilPct], backgroundColor: ['#f5a623','rgba(255,255,255,0.07)'], borderWidth: 0 }] },
+  options: { responsive:true, maintainAspectRatio:false, rotation:-90, circumference:180, cutout:'75%', plugins:{legend:{display:false},tooltip:{enabled:false}} }
+});
+
+const barCtx  = document.getElementById('weeklyChart').getContext('2d');
+const barGrad = barCtx.createLinearGradient(0,0,0,220);
+barGrad.addColorStop(0,'rgba(91,158,255,0.85)');
+barGrad.addColorStop(1,'rgba(91,158,255,0.15)');
+const weeklyChart = new Chart(barCtx, {
+  type: 'bar',
+  data: {
+    labels: WEEKLY.map(d => new Date(d.day+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'})),
+    datasets: [{ data: WEEKLY.map(d=>d.count), backgroundColor: barGrad, borderRadius:8, borderSkipped:false }]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{display:false}, border:{display:false}, ticks:{font:{size:12}}},
+      y:{grid:{color:'rgba(255,255,255,0.04)'}, border:{display:false}, ticks:{precision:0,font:{size:11}}, min:0}
+    }
+  }
+});
+
+function timeAgo(iso) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60)  return 'just now';
+  const m = Math.floor(s/60);
+  if (m < 60)  return `${m}m ago`;
+  const h = Math.floor(m/60);
+  if (h < 24)  return `${h}h ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+function refreshTimestamps() { document.querySelectorAll('[data-ts]').forEach(el => el.textContent = timeAgo(el.dataset.ts)); }
+refreshTimestamps();
+setInterval(refreshTimestamps, 30_000);
+
+const logList = document.getElementById('log-list');
+function iconClass(t) { return t==='checkout'?'icon-checkout':t==='return'?'icon-return':'icon-login'; }
+function iconChar(t)  { return t==='checkout'?'→':t==='return'?'←':'✓'; }
+function eventText(e) {
+  if (e.type==='checkout') return `<strong>${e.user_name}</strong> checked out <strong>${e.tool_name}</strong>`;
+  if (e.type==='return')   return `<strong>${e.user_name}</strong> returned <strong>${e.tool_name}</strong>`;
+  return `<strong>${e.user_name}</strong> logged in`;
+}
+function prependEvent(e) {
+  const empty = document.getElementById('log-empty');
+  if (empty) empty.remove();
+  const item = document.createElement('div');
+  item.className = 'log-item';
+  item.innerHTML = `<div class="log-icon ${iconClass(e.type)}">${iconChar(e.type)}</div><div class="log-body"><div class="log-text">${eventText(e)}</div></div><div class="log-time" data-ts="${e.event_time}">just now</div>`;
+  logList.insertBefore(item, logList.firstChild);
+  while (logList.children.length > 30) logList.removeChild(logList.lastChild);
+}
+
+const es = new EventSource('/dashboard/events');
+es.onmessage = ev => { const d = JSON.parse(ev.data); if (d.type !== 'ping') prependEvent(d); };
+
+async function refreshStats() {
+  try {
+    const r = await fetch('/dashboard/stats');
+    if (!r.ok) return;
+    const {stats:s, longest, weekly} = await r.json();
+    document.getElementById('s-active').textContent = s.active;
+    document.getElementById('s-out').textContent    = s.checked_out;
+    document.getElementById('s-avail').textContent  = s.available;
+    const pct  = s.active > 0 ? Math.round((s.checked_out/s.active)*100) : 0;
+    const aPct = s.active > 0 ? Math.round((s.available/s.active)*100)   : 0;
+    document.getElementById('s-util').textContent    = pct + '%';
+    document.getElementById('pct-out').textContent   = pct + '% of active';
+    document.getElementById('pct-avail').textContent = aPct + '% of active';
+    document.getElementById('l-avail').textContent   = s.available;
+    document.getElementById('l-out').textContent     = s.checked_out;
+    document.getElementById('l-ret').textContent     = s.retired;
+    document.getElementById('l-avail-pct').textContent = `(${aPct}%)`;
+    document.getElementById('l-out-pct').textContent   = `(${pct}%)`;
+    statusChart.data.datasets[0].data = [s.available, s.checked_out, s.retired];
+    statusChart.options.center = {value:s.active, label:'active'};
+    statusChart.update();
+    gaugeChart.data.datasets[0].data = [pct, 100-pct];
+    gaugeChart.update();
+    if (weekly) {
+      weeklyChart.data.labels = weekly.map(d => new Date(d.day+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'}));
+      weeklyChart.data.datasets[0].data = weekly.map(d=>d.count);
+      weeklyChart.update();
+    }
+    const dur = document.getElementById('longest-dur');
+    if (dur && longest) dur.textContent = longest.duration;
+  } catch(_) {}
+}
+setInterval(refreshStats, 30_000);
+</script>
+{% endblock %}

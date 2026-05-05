@@ -60,9 +60,10 @@ def checkout():
     for tool_id in tool_ids:
         try:
             database.checkout_tool(tool_id, session["user"])
-            name = database.get_tool_by_id(tool_id)["name"]
-            succeeded.append(name)
-            threading.Thread(target=Notify.send_checked_out, args=(name,), daemon=True).start()
+            tool  = dict(database.get_tool_by_id(tool_id))
+            label = database.display_name(tool)
+            succeeded.append(label)
+            threading.Thread(target=Notify.send_checked_out, args=(label,), daemon=True).start()
         except ValueError as e:
             failed.append(str(e))
 

@@ -12,8 +12,10 @@ from json import load
 from pathlib import Path
 import dotenv
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 dotenv.load_dotenv()
-Config = load(open("config/settings.json", encoding="utf-8"))
+Config = load(open(BASE_DIR / "config" / "settings.json", encoding="utf-8"))
 
 class SMTPServer:
     def __init__(self,
@@ -102,7 +104,7 @@ def initialize_alerts():
 
 
 if __name__ == "__main__":
-    if not Path("assets/cat.png").is_file():
+    if not (BASE_DIR / "assets" / "cat.png").is_file():
         raise FileNotFoundError("The cat is missing...")
     Notifications = initialize_alerts()
     Notifications.send_registered("Example Tool")
