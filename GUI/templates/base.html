@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}TBox{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    /* ── RESET ───────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── VARIABLES ───────────────────────────────────────────────── */
+    :root {
+      --bg:          #0a0a0a;
+      --card:        #141414;
+      --card2:       #1c1c1c;
+      --border:      rgba(255,255,255,0.08);
+      --border2:     rgba(255,255,255,0.13);
+      --text:        #f0f0f0;
+      --muted:       #8891a5;
+      --accent:      #ed7676;
+      --green:       #4ade80;
+      --blue:        #5b9eff;
+      --yellow:      #f5a623;
+      --retired:     #4a5268;
+      --radius-pill: 999px;
+      --radius-card: 16px;
+    }
+
+    /* ── BODY ────────────────────────────────────────────────────── */
+    body {
+      background-color: var(--bg);
+      background-image:
+        repeating-linear-gradient(0deg,  transparent, transparent 28px,
+          rgba(255,255,255,0.022) 28px, rgba(255,255,255,0.022) 29px),
+        repeating-linear-gradient(90deg, transparent, transparent 28px,
+          rgba(255,255,255,0.022) 28px, rgba(255,255,255,0.022) 29px);
+      color: var(--text);
+      font-family: 'DM Sans', 'Helvetica Neue', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── SITE HEADER ─────────────────────────────────────────────── */
+    .site-header {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,10,10,0.94);
+      backdrop-filter: blur(12px);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .logo em { color: var(--accent); font-style: normal; }
+
+    .header-nav { display: flex; gap: 4px; flex: 1; }
+    .header-nav a {
+      padding: 7px 14px;
+      border-radius: 8px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+    .header-nav a:hover,
+    .header-nav a.active { background: rgba(255,255,255,0.06); color: var(--text); }
+
+    .header-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+    .greeting { font-size: 13px; color: var(--muted); }
+    .greeting strong { color: var(--text); }
+
+    .btn-logout {
+      padding: 7px 14px;
+      border-radius: 8px;
+      background: rgba(237,118,118,0.10);
+      color: var(--accent);
+      border: 1px solid rgba(237,118,118,0.20);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    .btn-logout:hover { background: rgba(237,118,118,0.18); }
+
+    /* ── TOAST ───────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: var(--card2);
+      border: 1.5px solid rgba(74,222,128,0.3);
+      color: var(--text);
+      padding: 12px 22px;
+      border-radius: var(--radius-pill);
+      font-size: 14px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.error { border-color: rgba(237,118,118,0.35); }
+    .toast-dot  { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .toast.error .toast-dot { background: var(--accent); }
+
+    /* ── SHARED BUTTON (primary) ─────────────────────────────────── */
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 14px 0;
+      border-radius: var(--radius-pill);
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 2px 18px rgba(237,118,118,0.18);
+      transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
+    }
+    .btn-primary:hover {
+      background: #f08888;
+      box-shadow: 0 4px 28px rgba(237,118,118,0.35);
+      transform: translateY(-1px);
+    }
+    .btn-primary:active  { transform: translateY(0); box-shadow: 0 1px 8px rgba(237,118,118,0.15); }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ── SHARED GHOST BUTTON ─────────────────────────────────────── */
+    .btn-ghost {
+      padding: 9px 22px;
+      border-radius: var(--radius-pill);
+      border: 1.5px solid var(--border2);
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── SHARED TEXT INPUT ───────────────────────────────────────── */
+    .field-input {
+      width: 100%;
+      padding: 13px 18px;
+      border-radius: var(--radius-pill);
+      border: 1.5px solid var(--border2);
+      background: var(--card2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .field-input::placeholder { color: var(--muted); }
+    .field-input:focus {
+      border-color: rgba(237,118,118,0.45);
+      box-shadow: 0 0 0 3px rgba(237,118,118,0.07);
+    }
+    .field-input.error {
+      border-color: var(--accent);
+      background: rgba(237,118,118,0.07);
+    }
+
+    /* ── RFID DOT ────────────────────────────────────────────────── */
+    .rfid-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--accent);
+      box-shadow: 0 0 6px rgba(237,118,118,0.5);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .rfid-dot.scanning {
+      background: var(--yellow);
+      box-shadow: 0 0 8px rgba(245,166,35,0.6);
+      animation: rfid-blink 1s ease infinite;
+    }
+    .rfid-dot.ready {
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(74,222,128,0.6);
+    }
+    @keyframes rfid-blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ── STATUS PILL ─────────────────────────────────────────────── */
+    .status-pill {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 11px;
+      border-radius: var(--radius-pill);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .status-pill.available   { background: rgba(74,222,128,0.12);  color: var(--green); }
+    .status-pill.checked-out { background: rgba(237,118,118,0.12); color: var(--accent); }
+    .status-pill.retired     { background: rgba(255,255,255,0.05); color: var(--muted); }
+
+    /* ── STATUS DOT ──────────────────────────────────────────────── */
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .status-dot.available   { background: var(--green); }
+    .status-dot.checked-out { background: var(--accent); }
+    .status-dot.retired     { background: var(--retired); }
+
+    /* ── PAGE CONTENT WRAPPER ────────────────────────────────────── */
+    .page-content { flex: 1; display: flex; flex-direction: column; }
+  </style>
+  {% block extra_styles %}{% endblock %}
+</head>
+<body>
+
+{% block header %}
+<header class="site-header">
+  <a href="/dashboard" class="logo">Tool <em>Vault</em></a>
+  <nav class="header-nav">
+    <a href="/inventory" class="{{ 'active' if request.path.startswith('/inventory') else '' }}">📦 Inventory</a>
+    <a href="/register"  class="{{ 'active' if request.path.startswith('/register')  else '' }}">➕ Register</a>
+    <a href="/retire"    class="{{ 'active' if request.path.startswith('/retire')    else '' }}">🗑️ Retire</a>
+  </nav>
+  <div class="header-right">
+    <span class="greeting">Welcome, <strong>{{ session.user }}</strong></span>
+    <a href="/logout" class="btn-logout">Logout →</a>
+  </div>
+</header>
+{% endblock %}
+
+<div class="toast" id="toast">
+  <div class="toast-dot"></div>
+  <span id="toast-msg"></span>
+</div>
+
+{% block content %}{% endblock %}
+
+<script>
+let _toastTimer = null;
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.toggle('error', type === 'error');
+  clearTimeout(_toastTimer);
+  t.classList.add('show');
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+}
+</script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

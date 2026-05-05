@@ -1,6 +1,7 @@
 import os
 import threading
 import time
+from pathlib import Path
 from flask import Flask
 from login import login_bp
 from dashboard import dashboard_bp
@@ -13,17 +14,19 @@ from dotenv import load_dotenv
 import alerts
 
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
 
 
 def server():
-    app = Flask(__name__, template_folder="../GUI/templates", static_folder="../GUI")
+    app = Flask(
+        __name__,
+        template_folder=str(BASE_DIR / "GUI" / "templates"),
+        static_folder=str(BASE_DIR / "GUI")
+    )
     app.secret_key = os.getenv("SECRET_KEY")
-    if not os.path.exists("../TBox/data/tools.db"):
-        database.init_db()
-        print("Database initialized.")
-    else:
-        print("Database already exists. Skipping initialization.")
+    database.init_db()
+    print("Database ready.")
 
     app.register_blueprint(login_bp)
     app.register_blueprint(dashboard_bp)

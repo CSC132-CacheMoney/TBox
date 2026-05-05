@@ -105,13 +105,10 @@ def retire_tool():
                     )
                     continue
                 database.retire_tool(tool_id)
-                retired_name = tool['name']
+                retired_name = database.display_name(dict(tool))
 
         if retired_name:
-            flash(
-                f"Tool retired: {retired_name}.",
-                "success"
-            )
+            flash(f"Tool retired: {retired_name}.", "success")
             threading.Thread(target=alerts.server.send_retired, args=(retired_name,), daemon=True).start()
 
         return redirect(url_for("inventory.inventory"))

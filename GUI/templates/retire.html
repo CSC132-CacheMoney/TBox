@@ -1,767 +1,377 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TBox — Tool Retirement / Replacement</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Serif+Display&display=swap');
+{% extends "base.html" %}
+{% block title %}TBox — Retire / Replace{% endblock %}
 
-    :root {
-      --bg:             #1a1a1a;
-      --text:           #f0f0f0;
-      --subtext:        #888;
-      --salmon:         #e87070;
-      --pill-bg:        #1d1d1d;
-      --pill-border:    rgba(255,255,255,0.07);
-      --radius-pill:    999px;
-      --amber:          #f0a500;
-      --red-btn:        #d94040;
-    }
+{% block extra_styles %}
+<style>
+  /* ── CONTENT ─────────────────────────────────────────────────── */
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 32px 80px;
+    gap: 28px;
+  }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  .prompt-label { font-size: 15px; color: var(--muted); text-align: center; }
 
-    body {
-      background-color: var(--bg);
-      background-image:
-        repeating-linear-gradient(0deg, transparent, transparent 28px,
-          rgba(255,255,255,0.018) 28px, rgba(255,255,255,0.018) 29px),
-        repeating-linear-gradient(90deg, transparent, transparent 28px,
-          rgba(255,255,255,0.018) 28px, rgba(255,255,255,0.018) 29px);
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+  /* ── SEARCH ──────────────────────────────────────────────────── */
+  .search-wrap { position: relative; width: 360px; max-width: 100%; }
 
-    /* ── HEADER ── */
-    header {
-      margin: 20px 32px 12px;
-      background: #1d1d1d;
-      border-radius: 999px;
-      height: 72px;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      position: relative;
-      flex-shrink: 0;
-    }
+  .tool-input {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border2);
+    background: var(--card2);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .tool-input::placeholder { color: var(--muted); }
+  .tool-input:focus { border-color: rgba(237,118,118,0.45); }
 
-    .back-btn {
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      text-decoration: none;
-      transition: color 0.2s;
-      color: #fff;
-      z-index: 1;
-    }
-    .back-btn:hover { color: #ed7676; }
-    .back-btn svg { width: 28px; height: 28px; fill: currentColor; }
+  /* Autocomplete */
+  .autocomplete-list {
+    position: absolute;
+    top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--card2);
+    border: 1.5px solid var(--border2);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    z-index: 10;
+    display: none;
+  }
+  .autocomplete-list.open { display: block; }
+  .autocomplete-item {
+    padding: 12px 18px;
+    cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; gap: 10px;
+    transition: background 0.12s;
+  }
+  .autocomplete-item:hover { background: rgba(255,255,255,0.05); }
+  .ac-category { font-size: 11px; color: var(--muted); margin-left: auto; }
 
-    header h1 {
-      font-family: 'DM Serif Display', serif;
-      font-size: clamp(22px, 3vw, 38px);
-      font-weight: 700;
-      color: var(--salmon);
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      white-space: nowrap;
-      pointer-events: none;
-    }
+  /* Matched pill */
+  .matched-tool {
+    display: none;
+    align-items: center; gap: 14px;
+    padding: 14px 22px;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    width: 360px; max-width: 100%;
+  }
+  .matched-tool.visible { display: flex; }
+  .matched-name { font-size: 15px; flex: 1; }
 
-    /* ── TOAST ── */
-    .toast {
-      position: fixed;
-      bottom: 36px;
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: #1d1d1d;
-      border: 1.5px solid rgba(76,175,80,0.3);
-      color: #f0f0f0;
-      padding: 13px 24px;
-      border-radius: 999px;
-      font-size: 14px;
-      white-space: nowrap;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s, transform 0.3s;
-      z-index: 999;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-    .toast.error { border-color: rgba(232,112,112,0.3); }
-    .toast-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #4caf50;
-      flex-shrink: 0;
-    }
-    .toast.error .toast-dot { background: #e87070; }
+  /* ── ACTION BUTTONS ──────────────────────────────────────────── */
+  .action-btns { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 
-    /* ── MAIN CONTENT ── */
-    .content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 32px 80px;
-      gap: 32px;
-    }
+  .btn-replace, .btn-retire {
+    width: 220px; padding: 13px 0;
+    border-radius: var(--radius-pill); border: none;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.2px;
+    transition: background 0.18s, box-shadow 0.18s, transform 0.12s, opacity 0.18s;
+  }
+  .btn-replace {
+    background: var(--yellow);
+    color: #0a0a0a;
+    box-shadow: 0 2px 16px rgba(245,166,35,0.18);
+  }
+  .btn-replace:hover:not(:disabled) {
+    background: #f5b733;
+    box-shadow: 0 4px 24px rgba(245,166,35,0.35);
+    transform: translateY(-1px);
+  }
+  .btn-retire {
+    background: #c0392b;
+    color: #fff;
+    box-shadow: 0 2px 16px rgba(192,57,43,0.18);
+  }
+  .btn-retire:hover:not(:disabled) {
+    background: #e74c3c;
+    box-shadow: 0 4px 24px rgba(192,57,43,0.30);
+    transform: translateY(-1px);
+  }
+  .btn-replace:active, .btn-retire:active { transform: translateY(0); box-shadow: none; }
+  .btn-replace:disabled, .btn-retire:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    .prompt-label {
-      font-size: 16px;
-      color: var(--subtext);
-      text-align: center;
-    }
+  /* ── OVERLAY / POPUP ─────────────────────────────────────────── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .overlay.open { display: flex; }
 
-    /* ── SEARCH INPUT ── */
-    .search-wrap {
-      position: relative;
-      width: 340px;
-      max-width: 100%;
-    }
+  .popup {
+    background: var(--card2);
+    border: 1.5px solid var(--border2);
+    border-radius: 20px;
+    width: 380px; max-width: 92vw;
+    padding: 30px 26px 24px;
+    display: flex; flex-direction: column; gap: 20px;
+    position: relative;
+  }
 
-    .tool-input {
-      width: 100%;
-      padding: 14px 20px;
-      border-radius: 999px;
-      border: 1.5px solid rgba(255,255,255,0.1);
-      background: #252525;
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 15px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .tool-input::placeholder { color: #555; }
-    .tool-input:focus { border-color: rgba(232,112,112,0.5); }
+  .popup-close {
+    position: absolute; top: 14px; right: 16px;
+    background: none; border: none;
+    color: var(--muted); font-size: 18px;
+    cursor: pointer; line-height: 1; transition: color 0.2s;
+  }
+  .popup-close:hover { color: var(--text); }
 
-    /* Autocomplete dropdown */
-    .autocomplete-list {
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 0; right: 0;
-      background: #222;
-      border: 1.5px solid rgba(255,255,255,0.08);
-      border-radius: 16px;
-      overflow: hidden;
-      z-index: 10;
-      display: none;
-    }
-    .autocomplete-list.open { display: block; }
-    .autocomplete-item {
-      padding: 12px 20px;
-      cursor: pointer;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      transition: background 0.12s;
-    }
-    .autocomplete-item:hover { background: #2e2e2e; }
-    .autocomplete-item .ac-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .ac-dot.available   { background: #4caf50; }
-    .ac-dot.checked-out { background: var(--salmon); }
-    .ac-dot.retired     { background: #444; }
-    .ac-category { font-size: 11px; color: #555; margin-left: auto; }
+  .popup-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px; color: var(--accent); text-align: center;
+  }
+  .popup-sub { font-size: 13px; color: var(--muted); text-align: center; line-height: 1.5; }
 
-    /* ── MATCHED TOOL PILL (preview) ── */
-    .matched-tool {
-      display: none;
-      align-items: center;
-      gap: 14px;
-      padding: 14px 24px;
-      border-radius: 999px;
-      border: 1.5px solid rgba(255,255,255,0.07);
-      background: #1d1d1d;
-      width: 340px;
-      max-width: 100%;
-    }
-    .matched-tool.visible { display: flex; }
-    .matched-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .matched-name { font-size: 15px; flex: 1; }
-    .matched-status {
-      font-size: 11px; font-weight: 500;
-      padding: 4px 12px; border-radius: 999px;
-      text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    .matched-status.available   { background: rgba(76,175,80,0.12);  color: #4caf50; }
-    .matched-status.checked-out { background: rgba(232,112,112,0.12); color: var(--salmon); }
-    .matched-status.retired     { background: rgba(255,255,255,0.05); color: #555; }
+  .rfid-status-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
 
-    /* ── ACTION BUTTONS ── */
-    .action-btns {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-    }
+  .tap-zone {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius-card);
+    padding: 28px 20px; text-align: center;
+    font-size: 14px; color: var(--muted);
+    transition: border-color 0.3s, color 0.3s, background 0.3s;
+    min-height: 80px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px;
+  }
+  .tap-zone.active  { border-color: rgba(74,222,128,0.4);  color: var(--green); }
+  .tap-zone.success { border-color: rgba(74,222,128,0.7);  background: rgba(74,222,128,0.06); color: var(--green); }
+  .tap-zone .tag-icon { font-size: 28px; line-height: 1; }
+  .tag-value { font-family: monospace; font-size: 12px; color: var(--green); margin-top: 4px; }
 
-    .btn-replace, .btn-retire {
-      width: 200px;
-      padding: 12px 0;
-      border-radius: 999px;
-      border: none;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s, filter 0.2s;
-      letter-spacing: 0.3px;
-    }
-    .btn-replace {
-      background: var(--amber);
-      color: #1a1a1a;
-    }
-    .btn-replace:hover:not(:disabled) { filter: brightness(1.1); }
-    .btn-retire {
-      background: var(--red-btn);
-      color: #fff;
-    }
-    .btn-retire:hover:not(:disabled) { filter: brightness(1.15); }
-    .btn-replace:active, .btn-retire:active { transform: scale(0.97); }
-    .btn-replace:disabled, .btn-retire:disabled {
-      opacity: 0.3; cursor: not-allowed;
-    }
+  .popup-footer { display: flex; gap: 10px; }
+  .btn-popup-cancel {
+    flex: 1; padding: 11px 0; border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border2); background: transparent;
+    color: var(--muted); font-family: inherit; font-size: 13px;
+    cursor: pointer; transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-popup-cancel:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+{% endblock %}
 
-    /* ── OVERLAY / POPUP ── */
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-    .overlay.open { display: flex; }
-
-    .popup {
-      background: #1e1e1e;
-      border: 1.5px solid rgba(255,255,255,0.09);
-      border-radius: 24px;
-      width: 380px;
-      max-width: 90vw;
-      padding: 32px 28px 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-      position: relative;
-    }
-
-    .popup-title {
-      font-family: 'DM Serif Display', serif;
-      font-size: 22px;
-      color: var(--salmon);
-      text-align: center;
-    }
-
-    .popup-sub {
-      font-size: 13px;
-      color: var(--subtext);
-      text-align: center;
-      line-height: 1.5;
-    }
-
-    /* RFID status row */
-    .rfid-status {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
-      color: var(--subtext);
-    }
-    .rfid-dot {
-      width: 12px; height: 12px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      transition: background 0.3s, box-shadow 0.3s;
-      background: #d94040;
-    }
-    .rfid-dot.ready {
-      background: #4caf50;
-      box-shadow: 0 0 6px rgba(76,175,80,0.6);
-    }
-    .rfid-dot.scanning {
-      background: var(--amber);
-      box-shadow: 0 0 6px rgba(240,165,0,0.6);
-      animation: pulse 1s ease-in-out infinite;
-    }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-    /* Tag tap animation area */
-    .tap-zone {
-      border: 2px dashed rgba(255,255,255,0.1);
-      border-radius: 16px;
-      padding: 28px 20px;
-      text-align: center;
-      font-size: 14px;
-      color: #555;
-      transition: border-color 0.3s, color 0.3s;
-      min-height: 80px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .tap-zone.active {
-      border-color: rgba(76,175,80,0.4);
-      color: #4caf50;
-    }
-    .tap-zone.success-flash {
-      border-color: rgba(76,175,80,0.8);
-      background: rgba(76,175,80,0.07);
-      color: #4caf50;
-    }
-    .tap-zone .tag-icon {
-      font-size: 28px;
-      line-height: 1;
-    }
-    .tag-value {
-      font-family: monospace;
-      font-size: 12px;
-      color: #4caf50;
-      margin-top: 4px;
-    }
-
-    .btn-init-rfid {
-      width: 100%;
-      padding: 13px 0;
-      border-radius: 999px;
-      border: none;
-      background: var(--red-btn);
-      color: #fff;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: filter 0.2s, transform 0.1s;
-    }
-    .btn-init-rfid:hover { filter: brightness(1.15); }
-    .btn-init-rfid:active { transform: scale(0.98); }
-    .btn-init-rfid.initialized {
-      background: #2e7d32;
-    }
-
-    .popup-footer {
-      display: flex;
-      gap: 10px;
-    }
-    .btn-popup-cancel {
-      flex: 1;
-      padding: 11px 0;
-      border-radius: 999px;
-      border: 1.5px solid rgba(255,255,255,0.1);
-      background: transparent;
-      color: var(--subtext);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
-    }
-    .btn-popup-cancel:hover { border-color: var(--salmon); color: var(--salmon); }
-
-    .btn-popup-confirm {
-      flex: 2;
-      padding: 11px 0;
-      border-radius: 999px;
-      border: none;
-      background: var(--amber);
-      color: #1a1a1a;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: filter 0.2s, transform 0.1s, opacity 0.2s;
-    }
-    .btn-popup-confirm:hover:not(:disabled) { filter: brightness(1.1); }
-    .btn-popup-confirm:active { transform: scale(0.98); }
-    .btn-popup-confirm:disabled { opacity: 0.3; cursor: not-allowed; }
-
-    .popup-close {
-      position: absolute;
-      top: 14px; right: 18px;
-      background: none; border: none;
-      color: #555; font-size: 20px;
-      cursor: pointer; line-height: 1;
-      transition: color 0.2s;
-    }
-    .popup-close:hover { color: var(--text); }
-  </style>
-</head>
-<body>
-
-  <!-- HEADER -->
-  <header>
-    <a href="/dashboard" class="back-btn">
-      <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-    </a>
-    <h1>Tool Retirement / Replacement</h1>
-  </header>
-
-  <div class="toast" id="toast">
-    <div class="toast-dot"></div>
-    <span id="toast-msg"></span>
-  </div>
-
-  <!-- MAIN -->
+{% block content %}
+<div class="page-content">
   <div class="content">
 
-    <p class="prompt-label">Enter Tool Name or scan RFID tag</p>
+    <p class="prompt-label">Enter tool name or scan RFID tag</p>
 
-    <!-- Search input with autocomplete -->
     <div class="search-wrap">
-      <input
-        type="text"
-        id="tool-input"
-        class="tool-input"
-        placeholder="Tool name or RFID…"
-        autocomplete="off"
-        oninput="handleInput(this.value)"
-        onblur="setTimeout(closeDropdown, 150)"
-      />
+      <input type="text" id="tool-input" class="tool-input"
+             placeholder="Tool name or RFID…" autocomplete="off"
+             oninput="handleInput(this.value)"
+             onblur="setTimeout(closeDropdown, 150)"/>
       <div class="autocomplete-list" id="autocomplete-list"></div>
     </div>
 
-    <!-- Matched tool preview pill -->
     <div class="matched-tool" id="matched-pill">
-      <div class="matched-dot" id="matched-dot"></div>
+      <div class="status-dot" id="matched-dot"></div>
       <span class="matched-name" id="matched-name">—</span>
-      <span class="matched-status" id="matched-status">—</span>
+      <span class="status-pill" id="matched-status">—</span>
     </div>
 
-    <!-- Hidden inputs for form submission -->
     <input type="hidden" id="selected-tool-id" value="">
     <input type="hidden" id="selected-rfid"    value="">
 
-    <!-- Action buttons -->
     <div class="action-btns">
-      <button class="btn-replace" id="btn-replace" disabled onclick="openReplacePopup()">Replace</button>
-      <button class="btn-retire"  id="btn-retire"  disabled onclick="submitRetire()">Retire</button>
+      <button class="btn-replace" id="btn-replace" disabled onclick="openReplacePopup()">Replace RFID</button>
+      <button class="btn-retire"  id="btn-retire"  disabled onclick="submitRetire()">Retire Tool</button>
     </div>
 
   </div>
+</div>
 
-  <!-- ── REPLACE RFID POPUP ── -->
-  <div class="overlay" id="overlay" onclick="overlayClick(event)">
-    <div class="popup" id="popup">
-      <button class="popup-close" onclick="closePopup()">✕</button>
-      <div class="popup-title">Replace RFID Tag</div>
-      <p class="popup-sub" id="popup-sub">
-        Tap a new RFID sticker to the reader to assign it to
-        <strong id="popup-tool-name">—</strong>.
-      </p>
-
-      <!-- Status row -->
-      <div class="rfid-status">
-        <div class="rfid-dot" id="rfid-dot"></div>
-        <span id="rfid-status-text">Initializing reader…</span>
-      </div>
-
-      <!-- Tap zone -->
-      <div class="tap-zone" id="tap-zone">
-        <div class="tag-icon">📡</div>
-        <span id="tap-zone-text">Waiting for reader…</span>
-        <div class="tag-value" id="new-tag-value" style="display:none"></div>
-      </div>
-
-      <!-- Footer buttons -->
-      <div class="popup-footer">
-        <button class="btn-popup-cancel" onclick="closePopup()">Cancel</button>
-      </div>
+<!-- REPLACE POPUP -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="popup" id="popup">
+    <button class="popup-close" onclick="closePopup()">✕</button>
+    <div class="popup-title">Replace RFID Tag</div>
+    <p class="popup-sub">
+      Tap a new RFID sticker to assign it to <strong id="popup-tool-name">—</strong>.
+    </p>
+    <div class="rfid-status-row">
+      <div class="rfid-dot" id="rfid-dot"></div>
+      <span id="rfid-status-text">Initializing reader…</span>
+    </div>
+    <div class="tap-zone" id="tap-zone">
+      <div class="tag-icon">📡</div>
+      <span id="tap-zone-text">Waiting for reader…</span>
+      <div class="tag-value" id="new-tag-value" style="display:none;"></div>
+    </div>
+    <div class="popup-footer">
+      <button class="btn-popup-cancel" onclick="closePopup()">Cancel</button>
     </div>
   </div>
+</div>
 
-  <!-- ── HIDDEN RETIRE FORM ── -->
-  <form id="retire-form" method="POST" action="/retire" style="display:none">
-    <input type="hidden" name="tool_id" id="retire-tool-id">
-  </form>
+<form id="retire-form"  method="POST" action="/retire"   style="display:none;"><input type="hidden" name="tool_id"      id="retire-tool-id"></form>
+<form id="replace-form" method="POST" action="/replace"  style="display:none;"><input type="hidden" name="tool_id"      id="replace-tool-id"><input type="hidden" name="new_rfid_tag" id="replace-new-rfid"></form>
+{% endblock %}
 
-  <!-- ── HIDDEN REPLACE FORM ── -->
-  <form id="replace-form" method="POST" action="/replace" style="display:none">
-    <input type="hidden" name="tool_id"      id="replace-tool-id">
-    <input type="hidden" name="new_rfid_tag" id="replace-new-rfid">
-  </form>
+{% block extra_scripts %}
+<script>
+  let selectedTool        = null;
+  let newRfidValue        = null;
+  let rfidPollingInterval = null;
+  let flaskTools          = [];
 
-  <script>
+  function statusClass(s) { return s === 'Checked Out' ? 'checked-out' : s === 'Retired' ? 'retired' : 'available'; }
 
-    // ── GLOBAL VARIABLES ────────────────────────────────────────────────────
-    let selectedTool = null;
-    let newRfidValue = null;
-    let rfidInitialized = false;
-    let rfidPollingInterval = null;
-    let flaskTools = [];
+  function handleInput(val) {
+    const q = val.trim().toLowerCase();
+    selectedTool = null; newRfidValue = null;
+    updateButtons(); hidePill();
+    if (!q) { closeDropdown(); return; }
+    const matches = flaskTools.filter(t => t.name.toLowerCase().includes(q) || t.rfid_tag.toLowerCase().includes(q)).slice(0, 8);
+    renderDropdown(matches);
+    const exact = flaskTools.find(t => t.name.toLowerCase() === q || t.rfid_tag.toLowerCase() === q);
+    if (exact) selectTool(exact, false);
+  }
 
-    // ── AUTOCOMPLETE ────────────────────────────────────────────────────────
-    function handleInput(val) {
-      const q = val.trim().toLowerCase();
-      selectedTool = null;
-      newRfidValue = null;
-      updateButtons();
-      hidePill();
+  function toolLabel(t) {
+    return t.brand ? `${t.name} <span style="color:var(--muted)">(${t.brand})</span>` : t.name;
+  }
 
-      if (!q) { closeDropdown(); return; }
+  function renderDropdown(matches) {
+    const list = document.getElementById('autocomplete-list');
+    if (!matches.length) { closeDropdown(); return; }
+    list.innerHTML = matches.map(t => {
+      const sc = statusClass(t.status);
+      return `<div class="autocomplete-item" onmousedown="selectTool(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+        <div class="status-dot ${sc}"></div>
+        <span>${toolLabel(t)}</span>
+        <span class="ac-category">${t.category}</span>
+        <span class="status-pill ${sc}" style="margin-left:auto;">${t.status}</span>
+      </div>`;
+    }).join('');
+    list.classList.add('open');
+  }
 
-      const matches = flaskTools.filter(t =>
-        t.name.toLowerCase().includes(q) || t.rfid_tag.toLowerCase().includes(q)
-      ).slice(0, 8);
+  function closeDropdown() { document.getElementById('autocomplete-list').classList.remove('open'); }
 
-      renderDropdown(matches);
+  function selectTool(tool, updateInput = true) {
+    selectedTool = tool;
+    if (updateInput) document.getElementById('tool-input').value = tool.name;
+    closeDropdown(); showPill(tool); updateButtons();
+  }
 
-      // If exact match, auto-select
-      const exact = flaskTools.find(t =>
-        t.name.toLowerCase() === q || t.rfid_tag.toLowerCase() === q
-      );
-      if (exact) selectTool(exact, false);
-    }
+  function showPill(tool) {
+    const sc = statusClass(tool.status);
+    document.getElementById('matched-dot').className  = `status-dot ${sc}`;
+    document.getElementById('matched-name').innerHTML = toolLabel(tool);
+    const st = document.getElementById('matched-status');
+    st.className   = `status-pill ${sc}`;
+    st.textContent = tool.status;
+    document.getElementById('matched-pill').classList.add('visible');
+  }
 
-    function renderDropdown(matches) {
-      const list = document.getElementById("autocomplete-list");
-      if (!matches.length) { closeDropdown(); return; }
-      list.innerHTML = matches.map(t => {
-        const sc = statusClass(t.status);
-        return `<div class="autocomplete-item" onmousedown="selectTool(${JSON.stringify(t).replace(/"/g,'&quot;')})">
-          <div class="ac-dot ${sc}"></div>
-          <span>${t.name}</span>
-          <span class="ac-category">${t.category}</span>
-        </div>`;
-      }).join("");
-      list.classList.add("open");
-    }
+  function hidePill() { document.getElementById('matched-pill').classList.remove('visible'); }
 
-    function closeDropdown() {
-      document.getElementById("autocomplete-list").classList.remove("open");
-    }
+  function updateButtons() {
+    const ok = !!selectedTool && selectedTool.status !== 'Checked Out';
+    document.getElementById('btn-replace').disabled = !ok;
+    document.getElementById('btn-retire').disabled  = !ok;
+  }
 
-    function selectTool(tool, updateInput = true) {
-      selectedTool = tool;
-      if (updateInput) {
-        document.getElementById("tool-input").value = tool.name;
-      }
-      closeDropdown();
-      showPill(tool);
-      updateButtons();
-    }
+  function submitRetire() {
+    if (!selectedTool) return;
+    if (!confirm(`Retire "${selectedTool.name}"? This cannot be undone.`)) return;
+    document.getElementById('retire-tool-id').value = selectedTool.id;
+    document.getElementById('retire-form').submit();
+  }
 
-    function showPill(tool) {
-      const sc = statusClass(tool.status);
-      const pill   = document.getElementById("matched-pill");
-      const dot    = document.getElementById("matched-dot");
-      const name   = document.getElementById("matched-name");
-      const status = document.getElementById("matched-status");
-      dot.className    = `matched-dot ${sc}`;
-      name.textContent = tool.name;
-      status.className = `matched-status ${sc}`;
-      status.textContent = tool.status;
-      pill.classList.add("visible");
-    }
+  function openReplacePopup() {
+    if (!selectedTool) return;
+    document.getElementById('popup-tool-name').textContent = selectedTool.name;
+    resetPopupState();
+    document.getElementById('overlay').classList.add('open');
+    initRfidReader();
+  }
 
-    function hidePill() {
-      document.getElementById("matched-pill").classList.remove("visible");
-    }
+  function closePopup() { document.getElementById('overlay').classList.remove('open'); stopRfidPolling(); resetPopupState(); }
+  function overlayClick(e) { if (e.target === document.getElementById('overlay')) closePopup(); }
 
-    function updateButtons() {
-      const hasSelected = !!selectedTool;
-      const notCheckedOut = hasSelected && selectedTool.status !== "Checked Out";
-      document.getElementById("btn-replace").disabled = !notCheckedOut;
-      document.getElementById("btn-retire").disabled  = !notCheckedOut;
-    }
+  function resetPopupState() {
+    stopRfidPolling(); newRfidValue = null;
+    document.getElementById('rfid-dot').className       = 'rfid-dot';
+    document.getElementById('rfid-status-text').textContent = 'Initializing reader…';
+    document.getElementById('tap-zone').className       = 'tap-zone';
+    document.getElementById('tap-zone-text').textContent = 'Waiting for reader…';
+    const tv = document.getElementById('new-tag-value');
+    tv.style.display = 'none'; tv.textContent = '';
+  }
 
-    function statusClass(s) {
-      return s === "Checked Out" ? "checked-out" : s === "Retired" ? "retired" : "available";
-    }
-
-    // ── RETIRE ──────────────────────────────────────────────────────────────
-    function submitRetire() {
-      if (!selectedTool) return;
-      if (!confirm(`Retire "${selectedTool.name}"? This cannot be undone.`)) return;
-      document.getElementById("retire-tool-id").value = selectedTool.id;
-      document.getElementById("retire-form").submit();
-    }
-
-    // ── REPLACE POPUP ───────────────────────────────────────────────────────
-    function openReplacePopup() {
-      if (!selectedTool) return;
-      document.getElementById("popup-tool-name").textContent = selectedTool.name;
-      resetPopupState();
-      document.getElementById("overlay").classList.add("open");
-      initRfidReader();
-    }
-
-    function closePopup() {
-      document.getElementById("overlay").classList.remove("open");
-      stopRfidPolling();
-      resetPopupState();
-    }
-
-    function overlayClick(e) {
-      if (e.target === document.getElementById("overlay")) closePopup();
-    }
-
-    function resetPopupState() {
-      rfidInitialized = false;
-      newRfidValue    = null;
-      stopRfidPolling();
-
-      const dot    = document.getElementById("rfid-dot");
-      const txt    = document.getElementById("rfid-status-text");
-      const zone   = document.getElementById("tap-zone");
-      const tapTxt = document.getElementById("tap-zone-text");
-      const tagVal = document.getElementById("new-tag-value");
-
-      dot.className        = "rfid-dot";
-      txt.textContent      = "Initializing reader…";
-      zone.className       = "tap-zone";
-      tapTxt.textContent   = "Waiting for reader…";
-      tagVal.style.display = "none";
-      tagVal.textContent   = "";
-    }
-
-    function initRfidReader() {
-      if (!selectedTool) return;
-      const dot    = document.getElementById("rfid-dot");
-      const txt    = document.getElementById("rfid-status-text");
-      const zone   = document.getElementById("tap-zone");
-      const tapTxt = document.getElementById("tap-zone-text");
-
-      dot.className   = "rfid-dot scanning";
-      txt.textContent = "Initializing reader…";
-
-      fetch("/rfid/init", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rfid_tag: selectedTool.rfid_tag })
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) {
-            rfidInitialized = true;
-            dot.className      = "rfid-dot ready";
-            txt.textContent    = "Ready — tap new sticker to reader";
-            zone.className     = "tap-zone active";
-            tapTxt.textContent = "Tap new RFID sticker to reader…";
-            startRfidPolling();
-          } else {
-            showToast(data.msg || "Initialization failed — retrying…", 'error');
-            dot.className   = "rfid-dot";
-            txt.textContent = "Initialization failed — retrying…";
-            setTimeout(initRfidReader, 2000);
-          }
-        })
-        .catch(() => {
-          showToast("Could not reach reader — retrying…", 'error');
-          dot.className   = "rfid-dot";
-          txt.textContent = "Could not reach reader — retrying…";
+  function initRfidReader() {
+    const dot = document.getElementById('rfid-dot');
+    const txt = document.getElementById('rfid-status-text');
+    dot.className   = 'rfid-dot scanning';
+    txt.textContent = 'Initializing reader…';
+    fetch('/rfid/init', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rfid_tag:selectedTool.rfid_tag}) })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          dot.className                                     = 'rfid-dot ready';
+          txt.textContent                                   = 'Ready — tap new sticker to reader';
+          document.getElementById('tap-zone').className    = 'tap-zone active';
+          document.getElementById('tap-zone-text').textContent = 'Tap new RFID sticker to reader…';
+          startRfidPolling();
+        } else {
+          showToast(data.msg || 'Initialization failed', 'error');
+          dot.className = 'rfid-dot'; txt.textContent = 'Initialization failed — retrying…';
           setTimeout(initRfidReader, 2000);
-        });
-    }
+        }
+      })
+      .catch(() => { showToast('Could not reach reader — retrying…', 'error'); setTimeout(initRfidReader, 2000); });
+  }
 
-    function startRfidPolling() {
-      rfidPollingInterval = setInterval(() => {
-        fetch("/rfid/poll")
-          .then(r => r.json())
-          .then(data => {
-            if (data.tag) {
-              stopRfidPolling();
-              onTagDetected(data.tag);
-            } else if (data.error) {
-              stopRfidPolling();
-              showToast(data.error, 'error');
-              resetRfidUI();
-            }
-          })
-          .catch(() => stopRfidPolling());
-      }, 500);
-    }
+  function startRfidPolling() {
+    rfidPollingInterval = setInterval(() => {
+      fetch('/rfid/poll').then(r => r.json()).then(data => {
+        if (data.tag)  { stopRfidPolling(); onTagDetected(data.tag); }
+        if (data.error){ stopRfidPolling(); showToast(data.error, 'error'); resetPopupState(); }
+      }).catch(() => stopRfidPolling());
+    }, 500);
+  }
 
-    function stopRfidPolling() {
-      if (rfidPollingInterval) {
-        clearInterval(rfidPollingInterval);
-        rfidPollingInterval = null;
-      }
-    }
+  function stopRfidPolling() { clearInterval(rfidPollingInterval); rfidPollingInterval = null; }
 
-    function resetRfidUI() {
-      const dot    = document.getElementById("rfid-dot");
-      const txt    = document.getElementById("rfid-status-text");
-      const zone   = document.getElementById("tap-zone");
-      const tapTxt = document.getElementById("tap-zone-text");
-      const tagVal = document.getElementById("new-tag-value");
-      rfidInitialized = false;
-      newRfidValue = null;
-      dot.className        = "rfid-dot";
-      txt.textContent      = "Reader disconnected — retrying…";
-      zone.className       = "tap-zone";
-      tapTxt.textContent   = "Waiting for reader…";
-      tagVal.style.display = "none";
-      tagVal.textContent   = "";
-      setTimeout(initRfidReader, 2000);
-    }
+  function onTagDetected(tag) {
+    newRfidValue = tag;
+    document.getElementById('tap-zone').className        = 'tap-zone success';
+    document.getElementById('tap-zone-text').textContent = 'Tag detected!';
+    const tv = document.getElementById('new-tag-value');
+    tv.textContent = tag; tv.style.display = 'block';
+    submitReplace();
+  }
 
-    function onTagDetected(tag) {
-      newRfidValue = tag;
-      const zone   = document.getElementById("tap-zone");
-      const tapTxt = document.getElementById("tap-zone-text");
-      const tagVal = document.getElementById("new-tag-value");
+  function submitReplace() {
+    if (!selectedTool || !newRfidValue) return;
+    document.getElementById('replace-tool-id').value  = selectedTool.id;
+    document.getElementById('replace-new-rfid').value = newRfidValue;
+    document.getElementById('replace-form').submit();
+  }
 
-      zone.className       = "tap-zone success-flash";
-      tapTxt.textContent   = "Tag detected!";
-      tagVal.textContent   = tag;
-      tagVal.style.display = "block";
-      submitReplace();
-    }
-
-    function submitReplace() {
-      if (!selectedTool || !newRfidValue) return;
-      document.getElementById("replace-tool-id").value  = selectedTool.id;
-      document.getElementById("replace-new-rfid").value = newRfidValue;
-      document.getElementById("replace-form").submit();
-    }
-  </script>
-
-  {# Flask injects the tools list as JSON for the autocomplete #}
   {% if tools %}
-  <script>
-    flaskTools = {{ tools | tojson }};
-  </script>
+  flaskTools = {{ tools | tojson }};
   {% endif %}
 
-  <script>
-    let toastTimer = null;
-    function showToast(msg, type = 'success') {
-      const toast = document.getElementById('toast');
-      document.getElementById('toast-msg').textContent = msg;
-      toast.classList.toggle('error', type === 'error');
-      clearTimeout(toastTimer);
-      toast.classList.add('show');
-      toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
-    }
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        showToast("{{ message }}", "{{ 'success' if category == 'success' else 'error' }}");
-      {% endfor %}
-    {% endwith %}
-  </script>
-
-</body>
-</html>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      showToast("{{ message }}", "{{ 'success' if category == 'success' else 'error' }}");
+    {% endfor %}
+  {% endwith %}
+</script>
+{% endblock %}

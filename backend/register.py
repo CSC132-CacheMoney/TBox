@@ -77,6 +77,7 @@ def register_tool():
         tool_name = request.form.get("tool_name", "").strip().lower().capitalize()
         condition = request.form.get("condition", "Good")
         category  = request.form.get("category",  "Hand Tool")
+        brand     = request.form.get("brand", "").strip()
         rfid_tag  = request.form.get("rfid_tag") or None
 
         if not tool_name:
@@ -88,10 +89,12 @@ def register_tool():
                 name=tool_name,
                 rfid_tag=rfid_tag,
                 category=category,
-                condition=condition
+                condition=condition,
+                brand=brand,
             )
-            flash(f"'{tool_name}' registered successfully.", "success")
-            threading.Thread(target=alerts.server.send_registered, args=(tool_name,), daemon=True).start()
+            label = database.display_name({"name": tool_name, "brand": brand})
+            flash(f"'{label}' registered successfully.", "success")
+            threading.Thread(target=alerts.server.send_registered, args=(label,), daemon=True).start()
             return redirect(url_for("register.register_tool"))
 
         except ValueError as e:
