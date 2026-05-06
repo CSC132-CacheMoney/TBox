@@ -129,6 +129,10 @@
   const es = new EventSource('/login/events');
   es.onmessage = e => showToast(e.data + ' returned');
   es.addEventListener('rfid-error', e => showToast(e.data, 'error'));
+  es.addEventListener('user-login', e => {
+    document.getElementById('username').value = e.data;
+    document.querySelector('form').submit();
+  });
 </script>
 {% endblock %}
 

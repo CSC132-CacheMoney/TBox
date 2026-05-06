@@ -8,6 +8,8 @@ from dashboard import dashboard_bp
 from inventory import inventory_bp
 from register import register_bp
 from retire import retire_bp
+from settings import settings_bp
+from admin import admin_bp
 import database
 import webbrowser
 from dotenv import load_dotenv
@@ -33,6 +35,8 @@ def server():
     app.register_blueprint(inventory_bp)
     app.register_blueprint(register_bp)
     app.register_blueprint(retire_bp)
+    app.register_blueprint(settings_bp)
+    app.register_blueprint(admin_bp)
 
     app.run(debug=False, host="0.0.0.0", port=6767)
 

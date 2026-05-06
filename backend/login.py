@@ -53,6 +53,8 @@ def login():
             _stop_rfid.set()
             session["user"] = username
             database.log_user(username)
+            if database.is_user_admin(username):
+                session["is_admin"] = True
             return redirect(url_for("dashboard.dashboard"))
     
     return render_template("login.html", error=error)
@@ -82,17 +84,25 @@ def rfid_polling_worker():
                         tool_id = rfid.read_block(4).rstrip(b'\x00').decode()
                         if tool_id:
                             print(f"[SCAN] Tag detected on login screen: {tool_id}")
-                            tool = database.get_tool_by_rfid(tool_id)
-                            if tool:
-                                database.return_tool(tool["id"])
-                                print(f'[DATABASE] Tool returned: {tool["name"]}')
-                                try:
-                                    Notify.send_checked_in(tool["name"])
-                                except Exception as e:
-                                    print(f"[RFID] Alert failed: {e}")
-                                _toast_queue.put(("return", tool["name"]))
+                            if tool_id.startswith('U'):
+                                user = database.get_user_by_rfid(tool_id)
+                                if user:
+                                    print(f'[DATABASE] User tag recognised: {user["name"]}')
+                                    _toast_queue.put(("user-login", user["name"]))
+                                else:
+                                    print(f'[DATABASE] No user registered for tag {tool_id}')
                             else:
-                                print(f'[DATABASE] No valid tag {tool_id}!')
+                                tool = database.get_tool_by_rfid(tool_id)
+                                if tool:
+                                    database.return_tool(tool["id"])
+                                    print(f'[DATABASE] Tool returned: {tool["name"]}')
+                                    try:
+                                        Notify.send_checked_in(tool["name"])
+                                    except Exception as e:
+                                        print(f"[RFID] Alert failed: {e}")
+                                    _toast_queue.put(("return", tool["name"]))
+                                else:
+                                    print(f'[DATABASE] No valid tag {tool_id}!')
                         last_uid = uid
                         time.sleep(2)
                     except RFIDBridgeError as e:
@@ -119,6 +129,8 @@ def login_events():
                 kind, msg = _toast_queue.get(timeout=25)
                 if kind == "error":
                     yield f"event: rfid-error\ndata: {msg}\n\n"
+                elif kind == "user-login":
+                    yield f"event: user-login\ndata: {msg}\n\n"
                 else:
                     yield f"data: {msg}\n\n"
             except queue.Empty:

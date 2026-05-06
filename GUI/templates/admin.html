@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+{% block title %}TBox — Admin{% endblock %}
+
+{% block extra_styles %}
+<style>
+  main {
+    padding: 32px;
+    max-width: 860px;
+    margin: 0 auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* ── PAGE TITLE ──────────────────────────────────────────────── */
+  .admin-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .admin-title h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .admin-badge {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 9px;
+    border-radius: var(--radius-pill);
+    background: rgba(237,118,118,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(237,118,118,0.25);
+  }
+
+  /* ── SECTION CARD ────────────────────────────────────────────── */
+  .admin-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+  }
+  .admin-card-header {
+    padding: 18px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .admin-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+  }
+  .admin-card-body { padding: 20px 24px; }
+
+  /* ── CHECKED OUT TABLE ───────────────────────────────────────── */
+  .checkout-empty {
+    text-align: center;
+    padding: 28px 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .checkout-row {
+    display: grid;
+    grid-template-columns: 1fr 140px 160px 110px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .checkout-row:last-child { border-bottom: none; }
+  .checkout-row-head {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+  }
+  .checkout-tool-name { font-size: 14px; font-weight: 500; }
+  .checkout-user {
+    font-size: 13px;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .checkout-user strong { color: var(--text); }
+  .checkout-time { font-size: 12px; color: var(--muted); }
+  .btn-return {
+    padding: 6px 14px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    width: 100%;
+    text-align: center;
+  }
+  .btn-return:hover { border-color: var(--green); color: var(--green); background: rgba(74,222,128,0.06); }
+
+  /* ── SETTINGS FORM ───────────────────────────────────────────── */
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 24px;
+  }
+  .settings-field { display: flex; flex-direction: column; gap: 6px; }
+  .settings-field.full { grid-column: 1 / -1; }
+  .settings-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+  }
+  .settings-input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border2);
+    background: var(--card2);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .settings-input:focus {
+    border-color: rgba(237,118,118,0.45);
+    box-shadow: 0 0 0 3px rgba(237,118,118,0.07);
+  }
+  .settings-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238891a5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+  .settings-section-divider {
+    grid-column: 1 / -1;
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 4px 0;
+  }
+  .settings-section-heading {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--accent);
+    margin-bottom: -6px;
+  }
+  .settings-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 6px;
+  }
+  .btn-save {
+    padding: 10px 28px;
+    border-radius: var(--radius-pill);
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, transform 0.12s;
+  }
+  .btn-save:hover { background: #f08888; transform: translateY(-1px); }
+  .btn-save:active { transform: translateY(0); }
+
+  /* ── DANGER ZONE ─────────────────────────────────────────────── */
+  .admin-card.danger { border-color: rgba(237,118,118,0.25); }
+  .admin-card.danger .admin-card-header { border-color: rgba(237,118,118,0.2); }
+  .admin-card.danger .admin-card-title { color: var(--accent); }
+  .danger-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .danger-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .btn-danger {
+    flex-shrink: 0;
+    padding: 10px 22px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(237,118,118,0.35);
+    background: rgba(237,118,118,0.08);
+    color: var(--accent);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .btn-danger:hover { background: rgba(237,118,118,0.18); border-color: rgba(237,118,118,0.55); }
+
+  /* ── CONFIRM MODAL ───────────────────────────────────────────── */
+  .confirm-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 300;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .confirm-overlay.open { opacity: 1; pointer-events: all; }
+  .confirm-panel {
+    background: var(--card);
+    border: 1px solid rgba(237,118,118,0.3);
+    border-radius: var(--radius-card);
+    width: 420px; max-width: 90vw;
+    padding: 28px;
+    transform: translateY(8px);
+    transition: transform 0.2s;
+  }
+  .confirm-overlay.open .confirm-panel { transform: translateY(0); }
+  .confirm-icon {
+    font-size: 32px; text-align: center;
+    margin-bottom: 14px;
+  }
+  .confirm-title {
+    font-size: 16px; font-weight: 600;
+    text-align: center; margin-bottom: 8px;
+  }
+  .confirm-desc {
+    font-size: 13px; color: var(--muted);
+    text-align: center; line-height: 1.6;
+    margin-bottom: 24px;
+  }
+  .confirm-actions { display: flex; gap: 10px; }
+  .btn-confirm-cancel {
+    flex: 1; padding: 11px 0;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--border2);
+    background: transparent; color: var(--muted);
+    font-family: inherit; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-confirm-cancel:hover { border-color: rgba(255,255,255,0.3); color: var(--text); }
+  .btn-confirm-ok {
+    flex: 1; padding: 11px 0;
+    border-radius: var(--radius-pill);
+    border: none;
+    background: var(--accent); color: #fff;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-confirm-ok:hover { background: #f08888; }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ── ADMIN PANEL ───────────────────────────────────────────────── -->
+<main>
+  <div class="admin-title">
+    <h1>Admin Panel</h1>
+    <span class="admin-badge">Administrator</span>
+  </div>
+
+  <!-- Checked Out Tools -->
+  <div class="admin-card" id="checkouts">
+    <div class="admin-card-header">
+      <span class="admin-card-title">Checked Out Tools</span>
+      <span style="font-size:12px;color:var(--muted);">{{ checked_out|length }} tool{{ 's' if checked_out|length != 1 else '' }}</span>
+    </div>
+    <div class="admin-card-body">
+      {% if checked_out %}
+      <div class="checkout-row checkout-row-head">
+        <span>Tool</span>
+        <span>Checked out by</span>
+        <span>Since</span>
+        <span></span>
+      </div>
+      {% for item in checked_out %}
+      <div class="checkout-row">
+        <span class="checkout-tool-name">
+          {{ item.name }}{% if item.brand %} <span style="color:var(--muted);font-weight:400;">({{ item.brand }})</span>{% endif %}
+        </span>
+        <span class="checkout-user"><strong>{{ item.user_name }}</strong></span>
+        <span class="checkout-time">{{ item.checked_out_at[:16].replace('T', ' ') }}</span>
+        <form method="POST" action="/admin/return/{{ item.id }}">
+          <button type="submit" class="btn-return">↩ Return</button>
+        </form>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="checkout-empty">No tools are currently checked out.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="admin-card" id="settings">
+    <div class="admin-card-header">
+      <span class="admin-card-title">Settings</span>
+    </div>
+    <div class="admin-card-body">
+      <form method="POST" action="/admin/settings">
+        <div class="settings-grid">
+
+          <span class="settings-section-heading">RFID Reader</span>
+          <div class="settings-field full">
+            <label class="settings-label">Serial Port</label>
+            <input type="text" name="rfid_port" class="settings-input"
+                   value="{{ settings.rfid.port }}" placeholder="/dev/ttyACM0">
+          </div>
+
+          <hr class="settings-section-divider">
+          <span class="settings-section-heading">Alerts</span>
+
+          <div class="settings-field">
+            <label class="settings-label">Checkout Limit (hours)</label>
+            <input type="number" name="checkout_limit_hours" class="settings-input"
+                   value="{{ settings.alerts.checkout_limit_hours }}" min="1" max="8760">
+          </div>
+          <div class="settings-field">
+            <label class="settings-label">Alert Method</label>
+            <select name="alert_method" class="settings-input settings-select">
+              <option value="console" {% if settings.alerts.alert_method == 'console' %}selected{% endif %}>Console only</option>
+              <option value="email"   {% if settings.alerts.alert_method == 'email'   %}selected{% endif %}>Email</option>
+            </select>
+          </div>
+          <div class="settings-field">
+            <label class="settings-label">SMTP Host</label>
+            <input type="text" name="email_host" class="settings-input"
+                   value="{{ settings.alerts.email_host }}" placeholder="smtp.example.com">
+          </div>
+          <div class="settings-field">
+            <label class="settings-label">SMTP Port</label>
+            <input type="number" name="email_port" class="settings-input"
+                   value="{{ settings.alerts.email_port }}" min="1" max="65535">
+          </div>
+          <div class="settings-field">
+            <label class="settings-label">From Address</label>
+            <input type="text" name="email_from" class="settings-input"
+                   value="{{ settings.alerts.email_from }}" placeholder="alerts@example.com">
+          </div>
+          <div class="settings-field">
+            <label class="settings-label">To Address</label>
+            <input type="text" name="email_to" class="settings-input"
+                   value="{{ settings.alerts.email_to }}" placeholder="admin@example.com">
+          </div>
+
+          <hr class="settings-section-divider">
+          <span class="settings-section-heading">Database</span>
+
+          <div class="settings-field full">
+            <label class="settings-label">Database Path</label>
+            <input type="text" name="db_path" class="settings-input"
+                   value="{{ settings.database.path }}" placeholder="data/tools.db">
+          </div>
+
+          <div class="settings-actions">
+            <button type="submit" class="btn-save">Save Settings</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Danger Zone -->
+  <div class="admin-card danger">
+    <div class="admin-card-header">
+      <span class="admin-card-title">Danger Zone</span>
+    </div>
+    <div class="admin-card-body">
+      <div class="danger-row">
+        <div>
+          <p style="font-size:14px;font-weight:500;margin-bottom:4px;">Reset Database</p>
+          <p class="danger-desc">Permanently deletes all tools, checkouts, users, and configuration. This action cannot be undone.</p>
+        </div>
+        <button type="button" class="btn-danger" onclick="showResetConfirm()">Reset Database</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Reset Confirmation Modal -->
+<div id="confirm-modal" class="confirm-overlay" onclick="closeConfirmOutside(event)">
+  <div class="confirm-panel">
+    <div class="confirm-icon">⚠️</div>
+    <p class="confirm-title">Reset the entire database?</p>
+    <p class="confirm-desc">This will permanently delete all tools, checkout records, and user accounts. The server will return to a blank state. <strong style="color:var(--accent);">This cannot be undone.</strong></p>
+    <div class="confirm-actions">
+      <button class="btn-confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <form method="POST" action="/admin/reset" style="flex:1;">
+        <button type="submit" class="btn-confirm-ok" style="width:100%;">Yes, Reset Everything</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function showResetConfirm() {
+  document.getElementById('confirm-modal').classList.add('open');
+}
+function closeConfirm() {
+  document.getElementById('confirm-modal').classList.remove('open');
+}
+function closeConfirmOutside(e) {
+  if (e.target === document.getElementById('confirm-modal')) closeConfirm();
+}
+</script>
+{% endblock %}
