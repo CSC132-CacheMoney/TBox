@@ -4,6 +4,11 @@ import alerts
 import threading
 import time
 from pico_Reader import RFIDBridge, RFIDBridgeError
+from pathlib import Path
+from json import load
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+Config = load(open(BASE_DIR / "config" / "settings.json", encoding="utf-8"))
 
 retire_bp = Blueprint("retire", __name__)
 
@@ -16,7 +21,7 @@ def _rfid_write_worker(tag_to_write: str):
     _rfid_result["tag"] = None
     _rfid_result["error"] = None
     try:
-        with RFIDBridge("/dev/ttyACM0") as rfid:
+        with RFIDBridge(Config['rfid']['port']) as rfid:
             while not _rfid_stop.is_set():
                 try:
                     rfid.scan()
@@ -38,6 +43,8 @@ def rfid_init():
     global _rfid_worker
     if "user" not in session:
         return jsonify({"success": False}), 401
+    if not session.get("is_admin"):
+        return jsonify({"success": False}), 403
 
     rfid_tag = (request.json or {}).get("rfid_tag", "")
     if not rfid_tag:
@@ -57,6 +64,8 @@ def rfid_init():
 def rfid_poll():
     if "user" not in session:
         return jsonify({"tag": None}), 401
+    if not session.get("is_admin"):
+        return jsonify({"tag": None}), 403
     return jsonify({"tag": _rfid_result["tag"], "error": _rfid_result["error"]})
 
 
@@ -64,6 +73,8 @@ def rfid_poll():
 def replace_tool():
     if "user" not in session:
         return redirect(url_for("login.login"))
+    if not session.get("is_admin"):
+        return redirect(url_for("dashboard.dashboard"))
     _rfid_stop.set()
     tool_id = request.form.get("tool_id", "")
     tool = database.get_tool_by_id(int(tool_id)) if tool_id.isdigit() else None
@@ -84,6 +95,8 @@ def retire_tool():
     """
     if "user" not in session:
         return redirect(url_for("login.login"))
+    if not session.get("is_admin"):
+        return redirect(url_for("dashboard.dashboard"))
 
     if request.method == "POST":
         raw = request.form.get("tool_id", "")

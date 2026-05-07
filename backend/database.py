@@ -133,14 +133,10 @@ def get_tool_by_id(tool_id):
     return tool
 
 def valid_tool_id(tool_id):
-    conn = get_connection()
     try:
-        get_tool_by_rfid(tool_id)
-        return True
-    except:
+        return get_tool_by_rfid(tool_id) is not None
+    except Exception:
         return False
-    finally:
-        conn.close
  
 def get_tool_by_rfid(rfid_tag):
     conn = get_connection()
@@ -442,6 +438,45 @@ def get_recent_activity(since=None, limit=25):
         """, (limit,)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def get_user_summary(username):
+    conn = get_connection()
+    stats = conn.execute("""
+        SELECT
+            COUNT(*) AS total_checkouts,
+            COALESCE(SUM(CASE WHEN returned_at IS NULL THEN 1 ELSE 0 END), 0) AS currently_out,
+            COUNT(DISTINCT tool_id) AS unique_tools,
+            AVG(CASE WHEN returned_at IS NOT NULL
+                THEN (julianday(returned_at) - julianday(checked_out_at)) * 24
+                ELSE NULL END) AS avg_hours
+        FROM checkouts WHERE user_name = ?
+    """, (username,)).fetchone()
+    current = conn.execute("""
+        SELECT t.name, t.brand, t.category, c.checked_out_at
+        FROM checkouts c JOIN tools t ON c.tool_id = t.id
+        WHERE c.user_name = ? AND c.returned_at IS NULL
+        ORDER BY c.checked_out_at ASC
+    """, (username,)).fetchall()
+    history = conn.execute("""
+        SELECT t.name, t.brand, t.category, c.checked_out_at, c.returned_at
+        FROM checkouts c JOIN tools t ON c.tool_id = t.id
+        WHERE c.user_name = ?
+        ORDER BY c.checked_out_at DESC LIMIT 30
+    """, (username,)).fetchall()
+    top_tools = conn.execute("""
+        SELECT t.name, t.brand, COUNT(*) AS uses
+        FROM checkouts c JOIN tools t ON c.tool_id = t.id
+        WHERE c.user_name = ?
+        GROUP BY c.tool_id ORDER BY uses DESC LIMIT 5
+    """, (username,)).fetchall()
+    conn.close()
+    return {
+        "stats": dict(stats),
+        "current": [dict(r) for r in current],
+        "history": [dict(r) for r in history],
+        "top_tools": [dict(r) for r in top_tools],
+    }
 
 
 if __name__ == "__main__":

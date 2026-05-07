@@ -1,6 +1,6 @@
 {
   "rfid": {
-    "port": "/dev/ttyUSB0"
+    "port": "/dev/ttyACM0"
   },
   "alerts": {
     "checkout_limit_hours": 24,

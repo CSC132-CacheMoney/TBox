@@ -126,13 +126,26 @@
     document.getElementById('error-msg').classList.remove('visible');
   });
 
-  const es = new EventSource('/login/events');
-  es.onmessage = e => showToast(e.data + ' returned');
-  es.addEventListener('rfid-error', e => showToast(e.data, 'error'));
-  es.addEventListener('user-login', e => {
-    document.getElementById('username').value = e.data;
-    document.querySelector('form').submit();
-  });
+  let _pollActive = true;
+  function _pollRFID() {
+    if (!_pollActive) return;
+    fetch('/login/poll')
+      .then(r => r.status === 204 ? null : r.json())
+      .then(data => {
+        if (!data) return;
+        if (data.kind === 'user-login') {
+          _pollActive = false;
+          document.getElementById('username').value = data.msg;
+          document.querySelector('form').submit();
+        } else if (data.kind === 'return') {
+          showToast(data.msg + ' returned');
+        } else if (data.kind === 'error') {
+          showToast(data.msg, 'error');
+        }
+      })
+      .catch(() => {});
+  }
+  setInterval(_pollRFID, 500);
 </script>
 {% endblock %}
 

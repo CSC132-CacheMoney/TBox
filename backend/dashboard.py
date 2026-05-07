@@ -1,4 +1,5 @@
 import json
+import threading
 import time
 from datetime import datetime
 from flask import (Blueprint, Response, abort, jsonify,
@@ -61,12 +62,13 @@ def dashboard_events():
     if "user" not in session:
         abort(401)
 
+    stop = threading.Event()
+
     def generate():
         last_seen = datetime.now().isoformat()
         yield f"data: {json.dumps({'type': 'ping'})}\n\n"
-        while True:
-            time.sleep(4)
-            try:
+        try:
+            while not stop.wait(timeout=4):
                 events = database.get_recent_activity(since=last_seen, limit=15)
                 if events:
                     last_seen = events[0]["event_time"]
@@ -74,8 +76,8 @@ def dashboard_events():
                         yield f"data: {json.dumps(e)}\n\n"
                 else:
                     yield ": keepalive\n\n"
-            except GeneratorExit:
-                return
+        finally:
+            stop.set()
 
     return Response(
         stream_with_context(generate()),

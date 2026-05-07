@@ -78,8 +78,8 @@
       font-weight: 500;
       transition: background 0.15s, color 0.15s;
     }
-    .header-nav a:hover,
-    .header-nav a.active { background: rgba(255,255,255,0.06); color: var(--text); }
+    .header-nav a:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .header-nav a.active { background: rgba(237,118,118,0.10); color: var(--accent); }
 
     .header-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
     .greeting { font-size: 13px; color: var(--muted); }
@@ -343,8 +343,13 @@
   <a href="/dashboard" class="logo">Tool <em>Vault</em></a>
   <nav class="header-nav">
     <a href="/inventory" class="{{ 'active' if request.path.startswith('/inventory') else '' }}">📦 Inventory</a>
-    <a href="/register"  class="{{ 'active' if request.path.startswith('/register')  else '' }}">➕ Register</a>
-    <a href="/retire"    class="{{ 'active' if request.path.startswith('/retire')    else '' }}">🗑️ Retire</a>
+    <a href="/summary"   class="{{ 'active' if request.path.startswith('/summary')   else '' }}">📊 Summary</a>
+    <a id="register-nav-link" href="/register"
+       class="{{ 'active' if request.path.startswith('/register') else '' }}"
+       style="{% if not session.get('is_admin') %}display:none{% endif %}">➕ Register</a>
+    <a id="retire-nav-link" href="/retire"
+       class="{{ 'active' if request.path.startswith('/retire') else '' }}"
+       style="{% if not session.get('is_admin') %}display:none{% endif %}">🗑️ Retire</a>
     <a id="admin-nav-link" href="/admin"
        class="{{ 'active' if request.path.startswith('/admin') else '' }}"
        style="color:var(--accent);{% if not session.get('is_admin') %}display:none{% endif %}">🔒 Admin</a>
@@ -526,6 +531,8 @@ function unlockAdmin() {
         document.getElementById('admin-lock-section').style.display = 'none';
         document.getElementById('admin-unlocked-section').style.display = 'block';
         document.getElementById('admin-nav-link').style.display = '';
+        document.getElementById('register-nav-link').style.display = '';
+        document.getElementById('retire-nav-link').style.display = '';
         showToast('Admin access unlocked');
       } else {
         err.textContent = d.error || 'Incorrect password';

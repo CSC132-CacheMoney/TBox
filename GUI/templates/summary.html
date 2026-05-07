@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}TBox — My Summary{% endblock %}
+
+{% block extra_styles %}
+<style>
+  main { padding: 28px 32px; max-width: 1440px; margin: 0 auto; flex: 1; }
+
+  .section-label {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px;
+  }
+
+  /* ── STAT CARDS ───────────────────────────────────────────────── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-card); padding: 22px 24px;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--top-line, transparent);
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+  }
+  .stat-label {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 10px;
+  }
+  .stat-num { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: -2px; margin-bottom: 10px; }
+  .stat-sub { font-size: 13px; color: var(--muted); }
+
+  .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+  .pill-green { background: rgba(74,222,128,0.12);  color: var(--green); }
+  .pill-red   { background: rgba(237,118,118,0.12); color: var(--accent); }
+
+  /* ── MIDDLE ROW ───────────────────────────────────────────────── */
+  .middle-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px; margin-bottom: 20px;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-card); padding: 22px 24px;
+  }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .card-title  { font-size: 14px; font-weight: 600; color: var(--text); }
+  .card-sub    { font-size: 12px; color: var(--muted); }
+  .card-empty  { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; padding: 28px 0; }
+
+  /* ── CURRENTLY CHECKED OUT ────────────────────────────────────── */
+  .curr-list { display: flex; flex-direction: column; gap: 10px; }
+  .curr-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 16px; border-radius: 10px;
+    background: var(--card2); border: 1px solid var(--border);
+  }
+  .curr-icon {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700;
+    background: rgba(237,118,118,0.12); color: var(--accent);
+  }
+  .curr-body  { flex: 1; min-width: 0; }
+  .curr-name  { font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .curr-cat   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .curr-right { text-align: right; flex-shrink: 0; }
+  .curr-dur   { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .curr-overdue { font-size: 11px; color: var(--accent); font-weight: 600; }
+
+  .progress-track { background: rgba(255,255,255,0.06); border-radius: 4px; height: 4px; overflow: hidden; width: 100px; }
+  .progress-fill  { height: 100%; border-radius: 4px; }
+
+  /* ── TOP TOOLS ────────────────────────────────────────────────── */
+  .top-list { display: flex; flex-direction: column; gap: 14px; }
+  .top-row  { display: flex; flex-direction: column; gap: 6px; }
+  .top-row-header { display: flex; justify-content: space-between; font-size: 13px; }
+  .top-name { color: var(--text); font-weight: 500; }
+  .top-uses { color: var(--muted); }
+  .top-bar-track { background: rgba(255,255,255,0.06); border-radius: 4px; height: 5px; overflow: hidden; }
+  .top-bar-fill  { height: 100%; border-radius: 4px; background: var(--blue); transition: width 0.8s ease; }
+
+  /* ── HISTORY ──────────────────────────────────────────────────── */
+  .history-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-card); padding: 22px 24px;
+  }
+  .hist-header {
+    display: grid; grid-template-columns: 2fr 1fr 1.2fr 1.2fr 0.8fr;
+    padding: 0 12px 10px;
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+  }
+  .hist-rows {
+    display: flex; flex-direction: column; gap: 2px;
+    margin-top: 4px; max-height: 420px; overflow-y: auto;
+  }
+  .hist-rows::-webkit-scrollbar { width: 4px; }
+  .hist-rows::-webkit-scrollbar-track { background: transparent; }
+  .hist-rows::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+  .hist-row {
+    display: grid; grid-template-columns: 2fr 1fr 1.2fr 1.2fr 0.8fr;
+    align-items: center; padding: 10px 12px;
+    border-radius: 8px; transition: background 0.12s; font-size: 13px;
+  }
+  .hist-row:hover { background: rgba(255,255,255,0.03); }
+  .hist-tool-name { color: var(--text); font-weight: 500; }
+  .hist-cat   { color: var(--muted); font-size: 12px; }
+  .hist-time  { color: var(--muted); }
+  .hist-dur   { color: var(--text); font-weight: 500; }
+  .hist-active { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--green); }
+  .hist-active-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: live-blink 2s ease infinite; flex-shrink: 0; }
+  @keyframes live-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+  .hist-empty { text-align: center; color: var(--muted); font-size: 14px; padding: 36px; }
+
+  @media (max-width: 1100px) {
+    .stats-row  { grid-template-columns: repeat(2, 1fr); }
+    .middle-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 680px) {
+    main { padding: 16px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .hist-header,
+    .hist-row { grid-template-columns: 2fr 1.2fr 0.8fr; }
+    .hist-header span:nth-child(2),
+    .hist-header span:nth-child(4),
+    .hist-row > *:nth-child(2),
+    .hist-row > *:nth-child(4) { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<main>
+
+  <div class="section-label">Your Activity</div>
+  <div class="stats-row">
+
+    <div class="stat-card" style="--top-line:linear-gradient(90deg,var(--blue),transparent);">
+      <div class="stat-label">Total Checkouts</div>
+      <div class="stat-num">{{ stats.total_checkouts or 0 }}</div>
+      <div class="stat-sub">all time</div>
+    </div>
+
+    <div class="stat-card" style="--top-line:linear-gradient(90deg,var(--accent),transparent);">
+      <div class="stat-label">Currently Out</div>
+      <div class="stat-num">{{ stats.currently_out or 0 }}</div>
+      <div class="stat-sub">
+        {% if (stats.currently_out or 0) > 0 %}
+          <span class="pill pill-red">{{ stats.currently_out }} active</span>
+        {% else %}
+          <span class="pill pill-green">all returned</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="stat-card" style="--top-line:linear-gradient(90deg,var(--green),transparent);">
+      <div class="stat-label">Unique Tools Used</div>
+      <div class="stat-num">{{ stats.unique_tools or 0 }}</div>
+      <div class="stat-sub">distinct tools</div>
+    </div>
+
+    <div class="stat-card" style="--top-line:linear-gradient(90deg,var(--yellow),transparent);">
+      <div class="stat-label">Avg Duration</div>
+      <div class="stat-num" style="font-size:32px;letter-spacing:-1px;">{{ avg_str }}</div>
+      <div class="stat-sub">per checkout</div>
+    </div>
+
+  </div>
+
+  <div class="section-label">Breakdown</div>
+  <div class="middle-row">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Currently Checked Out</div>
+        {% if current %}
+          <div class="card-sub">{{ current | length }} tool{{ 's' if current | length != 1 else '' }}</div>
+        {% endif %}
+      </div>
+      {% if current %}
+        <div class="curr-list">
+          {% for item in current %}
+          <div class="curr-item">
+            <div class="curr-icon">&#8594;</div>
+            <div class="curr-body">
+              <div class="curr-name">{{ item.name }}{% if item.brand %} <span style="color:var(--muted);font-weight:400;">({{ item.brand }})</span>{% endif %}</div>
+              <div class="curr-cat">{{ item.category }}</div>
+            </div>
+            <div class="curr-right">
+              <div class="curr-dur">{{ item.duration }}</div>
+              {% if item.overdue %}<div class="curr-overdue">Overdue</div>{% endif %}
+              <div class="progress-track" style="margin-top:5px;margin-left:auto;">
+                <div class="progress-fill"
+                     style="width:{{ item.bar_pct }}%;
+                            background:{% if item.bar_pct < 50 %}var(--green){% elif item.bar_pct < 80 %}var(--yellow){% else %}var(--accent){% endif %};"></div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="card-empty">All tools returned</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Most Used Tools</div>
+        {% if top_tools %}
+          <div class="card-sub">by checkout count</div>
+        {% endif %}
+      </div>
+      {% if top_tools %}
+        <div class="top-list">
+          {% for tool in top_tools %}
+          <div class="top-row">
+            <div class="top-row-header">
+              <span class="top-name">{{ tool.name }}{% if tool.brand %} <span style="color:var(--muted);font-weight:400;">({{ tool.brand }})</span>{% endif %}</span>
+              <span class="top-uses">{{ tool.uses }}x</span>
+            </div>
+            <div class="top-bar-track">
+              <div class="top-bar-fill" style="width:{{ tool.pct }}%;"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="card-empty">No checkout history yet</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <div class="section-label">Checkout History</div>
+  <div class="history-card">
+    <div class="hist-header">
+      <span>Tool</span>
+      <span>Category</span>
+      <span>Checked Out</span>
+      <span>Returned</span>
+      <span>Duration</span>
+    </div>
+    <div class="hist-rows">
+      {% if history %}
+        {% for item in history %}
+        <div class="hist-row">
+          <span class="hist-tool-name">{{ item.name }}{% if item.brand %} <span style="color:var(--muted);font-weight:400;">({{ item.brand }})</span>{% endif %}</span>
+          <span class="hist-cat">{{ item.category }}</span>
+          <span class="hist-time">{{ item.checked_out_at[:16].replace('T', ' ') }}</span>
+          <span>
+            {% if item.active %}
+              <span class="hist-active"><span class="hist-active-dot"></span>Active</span>
+            {% else %}
+              <span class="hist-time">{{ item.returned_at[:16].replace('T', ' ') }}</span>
+            {% endif %}
+          </span>
+          <span class="hist-dur">{{ item.duration }}</span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="hist-empty">No checkout history yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+</main>
+{% endblock %}
