@@ -1,6 +1,7 @@
 {
   "rfid": {
-    "port": "/dev/ttyUSB0"
+    "port": "/dev/ttyACM0",
+    "allowed_poll_ips": ["127.0.0.1", "::1"]
   },
   "alerts": {
     "checkout_limit_hours": 24,

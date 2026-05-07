@@ -78,8 +78,8 @@
       font-weight: 500;
       transition: background 0.15s, color 0.15s;
     }
-    .header-nav a:hover,
-    .header-nav a.active { background: rgba(255,255,255,0.06); color: var(--text); }
+    .header-nav a:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .header-nav a.active { background: rgba(237,118,118,0.10); color: var(--accent); }
 
     .header-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
     .greeting { font-size: 13px; color: var(--muted); }
@@ -97,6 +97,108 @@
       transition: background 0.15s;
     }
     .btn-logout:hover { background: rgba(237,118,118,0.18); }
+
+    /* ── SETTINGS BUTTON ─────────────────────────────────────────── */
+    .btn-settings {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-settings:hover { background: rgba(255,255,255,0.06); color: var(--text); border-color: rgba(255,255,255,0.2); }
+    .btn-settings svg { width: 16px; height: 16px; }
+
+    /* ── SETTINGS MODAL ──────────────────────────────────────────── */
+    .settings-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .settings-overlay.open { opacity: 1; pointer-events: all; }
+
+    .settings-panel {
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-card);
+      width: 460px; max-width: 92vw;
+      padding: 28px;
+      transform: translateY(8px);
+      transition: transform 0.2s;
+    }
+    .settings-overlay.open .settings-panel { transform: translateY(0); }
+
+    .settings-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .settings-header h2 { font-size: 16px; font-weight: 600; }
+    .settings-close {
+      width: 28px; height: 28px;
+      border-radius: 6px; border: none;
+      background: transparent; color: var(--muted);
+      font-size: 18px; line-height: 1;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .settings-close:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
+    .settings-section { padding: 20px 0; border-top: 1px solid var(--border); }
+    .settings-section:first-child { padding-top: 0; border-top: none; }
+
+    .settings-section-title {
+      font-size: 13px; font-weight: 600;
+      color: var(--text); margin-bottom: 4px;
+    }
+    .settings-section-desc {
+      font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.5;
+    }
+
+    .rfid-status-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 14px;
+      font-size: 13px; color: var(--muted);
+    }
+    .rfid-tag-id {
+      font-family: monospace; font-size: 12px;
+      color: var(--muted); background: var(--card2);
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 3px 10px; margin-bottom: 16px;
+      display: none;
+    }
+    .rfid-tag-id.visible { display: block; }
+
+    .settings-btn {
+      width: 100%; padding: 11px 0;
+      border-radius: var(--radius-pill); border: none;
+      cursor: pointer; font-family: inherit;
+      font-size: 13px; font-weight: 600;
+      color: #fff; background: var(--accent);
+      box-shadow: 0 2px 14px rgba(237,118,118,0.15);
+      transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
+    }
+    .settings-btn:hover { background: #f08888; box-shadow: 0 4px 22px rgba(237,118,118,0.3); transform: translateY(-1px); }
+    .settings-btn:active { transform: translateY(0); }
+    .settings-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .settings-input {
+      width: 100%; padding: 10px 14px;
+      border-radius: 10px; border: 1.5px solid var(--border2);
+      background: var(--card2); color: var(--text);
+      font-family: inherit; font-size: 13px; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .settings-input:focus {
+      border-color: rgba(237,118,118,0.45);
+      box-shadow: 0 0 0 3px rgba(237,118,118,0.07);
+    }
 
     /* ── TOAST ───────────────────────────────────────────────────── */
     .toast {
@@ -241,11 +343,25 @@
   <a href="/dashboard" class="logo">Tool <em>Vault</em></a>
   <nav class="header-nav">
     <a href="/inventory" class="{{ 'active' if request.path.startswith('/inventory') else '' }}">📦 Inventory</a>
-    <a href="/register"  class="{{ 'active' if request.path.startswith('/register')  else '' }}">➕ Register</a>
-    <a href="/retire"    class="{{ 'active' if request.path.startswith('/retire')    else '' }}">🗑️ Retire</a>
+    <a href="/summary"   class="{{ 'active' if request.path.startswith('/summary')   else '' }}">📊 Summary</a>
+    <a id="register-nav-link" href="/register"
+       class="{{ 'active' if request.path.startswith('/register') else '' }}"
+       style="{% if not session.get('is_admin') %}display:none{% endif %}">➕ Register</a>
+    <a id="retire-nav-link" href="/retire"
+       class="{{ 'active' if request.path.startswith('/retire') else '' }}"
+       style="{% if not session.get('is_admin') %}display:none{% endif %}">🗑️ Retire</a>
+    <a id="admin-nav-link" href="/admin"
+       class="{{ 'active' if request.path.startswith('/admin') else '' }}"
+       style="color:var(--accent);{% if not session.get('is_admin') %}display:none{% endif %}">🔒 Admin</a>
   </nav>
   <div class="header-right">
     <span class="greeting">Welcome, <strong>{{ session.user }}</strong></span>
+    <button class="btn-settings" onclick="openSettings()" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
     <a href="/logout" class="btn-logout">Logout →</a>
   </div>
 </header>
@@ -258,6 +374,67 @@
 
 {% block content %}{% endblock %}
 
+<!-- Settings Modal -->
+<div id="settings-modal" class="settings-overlay" onclick="closeSettingsOutside(event)">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button class="settings-close" onclick="closeSettings()" aria-label="Close">&#x2715;</button>
+    </div>
+
+    <div class="settings-section">
+      <p class="settings-section-title">RFID Login Tag</p>
+      <p class="settings-section-desc">Write your login credentials to an RFID tag. Next time, just tap it on the reader at the login screen to sign in instantly.</p>
+      <div class="rfid-status-row">
+        <div class="rfid-dot" id="settings-rfid-dot"></div>
+        <span id="settings-rfid-status">Ready to write</span>
+      </div>
+      <p class="rfid-tag-id" id="settings-rfid-id"></p>
+      <button class="settings-btn" id="settings-write-btn" onclick="startUserRfidWrite()">Write to RFID Tag</button>
+    </div>
+
+    <div class="settings-section">
+      <p class="settings-section-title">Administrator</p>
+      <p class="settings-section-desc">Unlock admin access to manage system settings, tool records, and configuration.</p>
+
+      <div id="admin-lock-section" {% if session.get('is_admin') %}style="display:none"{% endif %}>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <input type="password" id="admin-pw-input" class="settings-input"
+                 placeholder="Admin password" style="flex:1;"
+                 onkeydown="if(event.key==='Enter')unlockAdmin()">
+          <button id="admin-unlock-btn" class="settings-btn"
+                  style="width:auto;padding:0 20px;flex-shrink:0;"
+                  onclick="unlockAdmin()">Unlock</button>
+        </div>
+        <p id="admin-auth-error" style="font-size:12px;color:var(--accent);margin-top:4px;display:none;"></p>
+      </div>
+
+      <div id="admin-unlocked-section" {% if not session.get('is_admin') %}style="display:none"{% endif %}>
+        <div class="rfid-status-row" style="margin-bottom:14px;">
+          <div class="rfid-dot ready"></div>
+          <span style="font-size:13px;color:var(--muted);">Admin access granted</span>
+        </div>
+        <a href="/admin" class="settings-btn" style="display:block;text-align:center;text-decoration:none;">Open Admin Panel →</a>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <p class="settings-section-title">Your Connection</p>
+      <p class="settings-section-desc">Add these to the allowed RFID login IPs list in the admin panel to enable card login from this device.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--muted);">Connection IP</span>
+          <code style="font-family:monospace;color:var(--text);background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;">{{ request.remote_addr }}</code>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--muted);">Public IP</span>
+          <code id="modal-pub-ip" style="font-family:monospace;color:var(--text);background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;">…</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 let _toastTimer = null;
 function showToast(msg, type = 'success') {
@@ -267,6 +444,125 @@ function showToast(msg, type = 'success') {
   clearTimeout(_toastTimer);
   t.classList.add('show');
   _toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+function openSettings() {
+  document.getElementById('settings-modal').classList.add('open');
+  fetch('/settings/user_rfid')
+    .then(r => r.json())
+    .then(d => {
+      if (d.rfid_tag) {
+        document.getElementById('settings-rfid-dot').classList.add('ready');
+        document.getElementById('settings-rfid-status').textContent = 'Tag already saved — re-write to update';
+        document.getElementById('settings-rfid-id').textContent = 'User ID: ' + d.rfid_tag;
+        document.getElementById('settings-rfid-id').classList.add('visible');
+        document.getElementById('settings-write-btn').textContent = 'Re-write to RFID Tag';
+      }
+    });
+  const pubIpEl = document.getElementById('modal-pub-ip');
+  if (pubIpEl.textContent === '…') {
+    fetch('https://api.ipify.org?format=json')
+      .then(r => r.json())
+      .then(d => { pubIpEl.textContent = d.ip; })
+      .catch(() => { pubIpEl.textContent = 'unavailable'; });
+  }
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+  stopUserRfidWrite();
+}
+
+function closeSettingsOutside(e) {
+  if (e.target === document.getElementById('settings-modal')) closeSettings();
+}
+
+let _settingsRfidPoll = null;
+
+function startUserRfidWrite() {
+  const dot    = document.getElementById('settings-rfid-dot');
+  const status = document.getElementById('settings-rfid-status');
+  const tagId  = document.getElementById('settings-rfid-id');
+  const btn    = document.getElementById('settings-write-btn');
+
+  dot.className = 'rfid-dot scanning';
+  status.textContent = 'Hold your tag near the reader…';
+  tagId.classList.remove('visible');
+  btn.disabled = true;
+
+  fetch('/settings/rfid/init', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) {
+        dot.className = 'rfid-dot';
+        status.textContent = 'Error — please try again';
+        btn.disabled = false;
+        return;
+      }
+      tagId.textContent = 'User ID: ' + d.user_id;
+      tagId.classList.add('visible');
+      _settingsRfidPoll = setInterval(pollUserRfid, 400);
+    });
+}
+
+function pollUserRfid() {
+  fetch('/settings/rfid/poll')
+    .then(r => r.json())
+    .then(d => {
+      const dot    = document.getElementById('settings-rfid-dot');
+      const status = document.getElementById('settings-rfid-status');
+      const btn    = document.getElementById('settings-write-btn');
+
+      if (d.error) {
+        clearInterval(_settingsRfidPoll);
+        dot.className = 'rfid-dot';
+        status.textContent = d.error;
+        btn.disabled = false;
+      } else if (d.tag) {
+        clearInterval(_settingsRfidPoll);
+        dot.className = 'rfid-dot ready';
+        status.textContent = 'Tag written successfully!';
+        btn.disabled = false;
+        btn.textContent = 'Re-write to RFID Tag';
+        showToast('RFID login tag saved');
+      }
+    });
+}
+
+function stopUserRfidWrite() {
+  clearInterval(_settingsRfidPoll);
+}
+
+function unlockAdmin() {
+  const pw  = document.getElementById('admin-pw-input').value;
+  const err = document.getElementById('admin-auth-error');
+  const btn = document.getElementById('admin-unlock-btn');
+
+  err.style.display = 'none';
+  btn.disabled = true;
+
+  fetch('/admin/auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'password=' + encodeURIComponent(pw)
+  })
+    .then(r => r.json())
+    .then(d => {
+      btn.disabled = false;
+      if (d.success) {
+        document.getElementById('admin-lock-section').style.display = 'none';
+        document.getElementById('admin-unlocked-section').style.display = 'block';
+        document.getElementById('admin-nav-link').style.display = '';
+        document.getElementById('register-nav-link').style.display = '';
+        document.getElementById('retire-nav-link').style.display = '';
+        showToast('Admin access unlocked');
+      } else {
+        err.textContent = d.error || 'Incorrect password';
+        err.style.display = 'block';
+        document.getElementById('admin-pw-input').value = '';
+        document.getElementById('admin-pw-input').focus();
+      }
+    });
 }
 </script>
 {% block extra_scripts %}{% endblock %}

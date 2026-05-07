@@ -39,6 +39,11 @@ def rand_Tool_ID():
     return 'T' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
 
 
+def rand_User_ID():
+    """Generate a random 8-character user ID (U + 7 alphanumeric chars)."""
+    return 'U' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
+
+
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 DEFAULT_BAUD    = 115200

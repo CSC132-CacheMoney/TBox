@@ -44,6 +44,7 @@
   .tool-pill:active { transform: scale(0.997); }
   .tool-pill.selected { background: rgba(237,118,118,0.08); border-color: var(--accent); }
 
+  .pill-icon     { font-size: 18px; width: 26px; text-align: center; flex-shrink: 0; user-select: none; line-height: 1; }
   .pill-label    { font-size: 15px; font-weight: 400; color: var(--text); flex: 1; }
   .pill-brand    { font-size: 13px; color: var(--muted); }
   .pill-category { font-size: 12px; color: var(--muted); margin-right: 8px; }
@@ -114,6 +115,7 @@
     {% set sc = tool.status | lower | replace(' ', '-') %}
     <div class="tool-pill" data-id="{{ tool.id }}" onclick="toggleTool(this)">
       <div class="status-dot {{ sc }}"></div>
+      <span class="pill-icon" data-name="{{ tool.name }}" data-category="{{ tool.category }}"></span>
       <span class="pill-label">{{ tool.name }}{% if tool.brand %} <span class="pill-brand">({{ tool.brand }})</span>{% endif %}</span>
       <span class="pill-category">{{ tool.category }}</span>
       <span class="status-pill {{ sc }}">{{ tool.status }}</span>
@@ -144,6 +146,70 @@
 
 {% block extra_scripts %}
 <script>
+  /* ── Tool icon lookup ────────────────────────────────────────── */
+  function toolIcon(name, category) {
+    const n = (name     || '').toLowerCase();
+    const c = (category || '').toLowerCase();
+    const nameRules = [
+      [/hammer|mallet/,                   '🔨'],
+      [/drill/,                            '🪛'],
+      [/screwdriver/,                      '🪛'],
+      [/wrench|spanner/,                   '🔧'],
+      [/circular.?saw|mitre|miter|table.?saw/, '🪚'],
+      [/jigsaw|hacksaw|handsaw|saw/,       '🪚'],
+      [/router/,                           '🪚'],
+      [/chisel/,                           '🪚'],
+      [/tape.?measure|measuring.?tape/,   '📏'],
+      [/ruler|straightedge/,              '📏'],
+      [/caliper/,                          '📏'],
+      [/level/,                            '📐'],
+      [/square/,                           '📐'],
+      [/plier/,                            '🔧'],
+      [/clamp|vice|vise/,                 '🗜️'],
+      [/grinder|sander|orbital/,         '⚙️'],
+      [/multimeter|voltmeter|tester/,     '⚡'],
+      [/wire|crimp|stripper/,             '⚡'],
+      [/ladder|stepladder/,               '🪜'],
+      [/knife|cutter|blade|utility/,      '🔪'],
+      [/torch|heat.?gun|weld/,            '🔥'],
+      [/paint|brush|roller/,              '🖌️'],
+      [/flashlight|headlamp|lantern/,     '🔦'],
+      [/extension|cord/,                  '🔌'],
+      [/goggle|glasses|safety glass/,     '🥽'],
+      [/helmet|hard.?hat/,                '⛑️'],
+      [/glove/,                            '🧤'],
+      [/vacuum|hoover/,                   '🧹'],
+      [/nail/,                             '🔩'],
+      [/staple/,                           '🔩'],
+      [/bolt|screw|fastener|anchor/,      '🔩'],
+    ];
+    for (const [re, icon] of nameRules) {
+      if (re.test(n)) return icon;
+    }
+    const catRules = [
+      [/power/,       '⚡'],
+      [/electr/,      '⚡'],
+      [/measur/,      '📏'],
+      [/layout/,      '📐'],
+      [/wood/,        '🪚'],
+      [/cut/,         '✂️'],
+      [/fasten/,      '🔩'],
+      [/plumb/,       '🔧'],
+      [/safety/,      '⛑️'],
+      [/paint/,       '🎨'],
+      [/hand/,        '🔧'],
+    ];
+    for (const [re, icon] of catRules) {
+      if (re.test(c)) return icon;
+    }
+    return '🔧';
+  }
+
+  /* Fill icons for server-rendered pills */
+  document.querySelectorAll('.pill-icon[data-name]').forEach(el => {
+    el.textContent = toolIcon(el.dataset.name, el.dataset.category);
+  });
+
   /* Demo tools — renders only when Flask sends no tools (static preview) */
   const demoTools = [
     {id:1, name:"Hammer",          category:"Hand Tools",  status:"Available"},
@@ -161,6 +227,7 @@
       list.insertAdjacentHTML('beforeend', `
         <div class="tool-pill" data-id="${t.id}" onclick="toggleTool(this)">
           <div class="status-dot ${sc}"></div>
+          <span class="pill-icon">${toolIcon(t.name, t.category)}</span>
           <span class="pill-label">${t.name}${t.brand ? ` <span class="pill-brand">(${t.brand})</span>` : ''}</span>
           <span class="pill-category">${t.category}</span>
           <span class="status-pill ${sc}">${t.status}</span>
