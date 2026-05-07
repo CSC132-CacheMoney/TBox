@@ -83,10 +83,28 @@
 <h1 class="brand">Tool Vault</h1>
 
 <div class="login-card">
+{% if show_password_prompt %}
+  <p class="prompt-title">Admin verification</p>
+  <p class="prompt-sub">Enter the admin password to sign in as <strong>{{ prompt_username }}</strong></p>
+  <form method="POST" action="/" style="width:100%;display:flex;flex-direction:column;">
+    <input type="hidden" name="_rfid_auth" value="0">
+    <input type="hidden" name="username" value="{{ prompt_username }}">
+    <input
+      type="password"
+      name="_admin_password"
+      class="field-input"
+      placeholder="Admin password"
+      autocomplete="off"
+      required
+      autofocus
+    />
+    <button type="submit" class="btn-primary">Verify</button>
+  </form>
+{% else %}
   <p class="prompt-title">Please enter your name</p>
   <p class="prompt-sub">This name will be used for tool checkout records</p>
-
   <form method="POST" action="/" onsubmit="return validate(event)" style="width:100%;display:flex;flex-direction:column;">
+    <input type="hidden" name="_rfid_auth" id="_rfid_auth" value="0">
     <input
       type="text"
       name="username"
@@ -99,12 +117,16 @@
       required
     />
     <p class="error-msg" id="error-msg">Name must be between 2 and 10 characters.</p>
-    <button type="submit" class="btn-primary" onclick="yourCustomAction()">Check In</button>
+    <button type="submit" class="btn-primary">Check In</button>
   </form>
+{% endif %}
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
+{% if toast_error %}
+<div id="_boot-toast" data-msg="{{ toast_error }}" hidden></div>
+{% endif %}
 <script>
   function validate(e) {
     const input = document.getElementById('username');
@@ -136,6 +158,7 @@
         if (data.kind === 'user-login') {
           _pollActive = false;
           document.getElementById('username').value = data.msg;
+          document.getElementById('_rfid_auth').value = '1';
           document.querySelector('form').submit();
         } else if (data.kind === 'return') {
           showToast(data.msg + ' returned');
@@ -146,6 +169,9 @@
       .catch(() => {});
   }
   setInterval(_pollRFID, 500);
+
+  const _bt = document.getElementById('_boot-toast');
+  if (_bt) showToast(_bt.dataset.msg, 'error');
 </script>
 {% endblock %}
 

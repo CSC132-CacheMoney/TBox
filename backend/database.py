@@ -239,6 +239,15 @@ def log_user(name):
     conn.close()
 
 
+def get_all_users():
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT name, rfid_tag, is_admin, last_seen FROM users ORDER BY name"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 def get_user_by_rfid(rfid_tag):
     conn = get_connection()
     user = conn.execute("SELECT * FROM users WHERE rfid_tag = ?", (rfid_tag,)).fetchone()

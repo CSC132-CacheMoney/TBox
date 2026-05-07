@@ -1,3 +1,5 @@
+# retire.py — tool retirement and RFID tag replacement (admin only)
+
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
 import database
 import alerts
@@ -8,17 +10,20 @@ from pathlib import Path
 from json import load
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-Config = load(open(BASE_DIR / "config" / "settings.json", encoding="utf-8"))
+Config   = load(open(BASE_DIR / "config" / "settings.json", encoding="utf-8"))
 
 retire_bp = Blueprint("retire", __name__)
 
+# Module-level RFID write state — one write job active at a time
 _rfid_stop   = threading.Event()
 _rfid_result = {"tag": None, "error": None}
 _rfid_worker = threading.Thread()
 
 
 def _rfid_write_worker(tag_to_write: str):
-    _rfid_result["tag"] = None
+    """Background thread: waits for an RFID tag, then overwrites block 4
+    with *tag_to_write*.  Used when replacing a damaged or lost tag."""
+    _rfid_result["tag"]   = None
     _rfid_result["error"] = None
     try:
         with RFIDBridge(Config['rfid']['port']) as rfid:
@@ -40,6 +45,8 @@ def _rfid_write_worker(tag_to_write: str):
 
 @retire_bp.route("/rfid/init", methods=["POST"])
 def rfid_init():
+    """Start an RFID write job for the tag ID supplied in the JSON body.
+    Cancels any in-progress write first."""
     global _rfid_worker
     if "user" not in session:
         return jsonify({"success": False}), 401
@@ -50,6 +57,7 @@ def rfid_init():
     if not rfid_tag:
         return jsonify({"success": False, "msg": "no rfid_tag provided"}), 400
 
+    # Stop any running worker before starting a fresh one
     _rfid_stop.set()
     if _rfid_worker.is_alive():
         _rfid_worker.join(timeout=2)
@@ -62,6 +70,7 @@ def rfid_init():
 
 @retire_bp.route("/rfid/poll")
 def rfid_poll():
+    """Poll the result of the current RFID write job."""
     if "user" not in session:
         return jsonify({"tag": None}), 401
     if not session.get("is_admin"):
@@ -71,13 +80,15 @@ def rfid_poll():
 
 @retire_bp.route("/replace", methods=["POST"])
 def replace_tool():
+    """Handle the tag-replacement form submission — stops the write worker
+    and redirects back to inventory."""
     if "user" not in session:
         return redirect(url_for("login.login"))
     if not session.get("is_admin"):
         return redirect(url_for("dashboard.dashboard"))
     _rfid_stop.set()
     tool_id = request.form.get("tool_id", "")
-    tool = database.get_tool_by_id(int(tool_id)) if tool_id.isdigit() else None
+    tool    = database.get_tool_by_id(int(tool_id)) if tool_id.isdigit() else None
     if tool:
         flash(f"RFID tag replaced for '{tool['name']}'.", "success")
     else:
@@ -87,19 +98,17 @@ def replace_tool():
 
 @retire_bp.route("/retire", methods=["GET", "POST"])
 def retire_tool():
-    """
-    Retire Tool screen (s10071).
-    - GET:  Show the list of active (non-retired) tools to choose from.
-    - POST: Mark selected tool(s) as Retired in the database.
-            Retired tools stay in the DB for checkout history records.
-    """
+    """Retire Tool page — admin only.
+    GET:  Show a list of active (non-retired) tools.
+    POST: Mark selected tools as Retired.  Retired tools are kept in the
+          database so checkout history is preserved."""
     if "user" not in session:
         return redirect(url_for("login.login"))
     if not session.get("is_admin"):
         return redirect(url_for("dashboard.dashboard"))
 
     if request.method == "POST":
-        raw = request.form.get("tool_id", "")
+        raw      = request.form.get("tool_id", "")
         tool_ids = [int(i) for i in raw.split(",") if i.strip().isdigit()]
 
         if not tool_ids:
@@ -110,7 +119,7 @@ def retire_tool():
         for tool_id in tool_ids:
             tool = database.get_tool_by_id(tool_id)
             if tool:
-                # Don't retire a tool that's currently checked out
+                # Prevent retiring a tool that is currently checked out
                 if tool["status"] == "Checked Out":
                     flash(
                         f"'{tool['name']}' is currently checked out and cannot be retired.",
@@ -126,7 +135,6 @@ def retire_tool():
 
         return redirect(url_for("inventory.inventory"))
 
-    # GET — load all tools that can be retired (not already retired)
+    # GET — load all tools that can still be retired
     tools = [dict(row) for row in database.get_active_tools()]
-
     return render_template("retire.html", tools=tools)

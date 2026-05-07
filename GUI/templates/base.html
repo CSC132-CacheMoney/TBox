@@ -417,6 +417,21 @@
         <a href="/admin" class="settings-btn" style="display:block;text-align:center;text-decoration:none;">Open Admin Panel →</a>
       </div>
     </div>
+
+    <div class="settings-section">
+      <p class="settings-section-title">Your Connection</p>
+      <p class="settings-section-desc">Add these to the allowed RFID login IPs list in the admin panel to enable card login from this device.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--muted);">Connection IP</span>
+          <code style="font-family:monospace;color:var(--text);background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;">{{ request.remote_addr }}</code>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--muted);">Public IP</span>
+          <code id="modal-pub-ip" style="font-family:monospace;color:var(--text);background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;">…</code>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -444,6 +459,13 @@ function openSettings() {
         document.getElementById('settings-write-btn').textContent = 'Re-write to RFID Tag';
       }
     });
+  const pubIpEl = document.getElementById('modal-pub-ip');
+  if (pubIpEl.textContent === '…') {
+    fetch('https://api.ipify.org?format=json')
+      .then(r => r.json())
+      .then(d => { pubIpEl.textContent = d.ip; })
+      .catch(() => { pubIpEl.textContent = 'unavailable'; });
+  }
 }
 
 function closeSettings() {

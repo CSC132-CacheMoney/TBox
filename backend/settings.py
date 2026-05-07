@@ -1,3 +1,5 @@
+# settings.py — user-facing settings: RFID login-tag write flow
+
 from flask import Blueprint, jsonify, session
 import pico_Reader
 from pico_Reader import RFIDBridge, RFIDBridgeError
@@ -7,12 +9,16 @@ import time
 
 settings_bp = Blueprint("settings", __name__)
 
+# Module-level RFID write state — one write job active at a time
 _rfid_stop   = threading.Event()
 _rfid_result = {"tag": None, "uid": None, "error": None}
 _rfid_worker = threading.Thread()
 
 
 def _user_rfid_write_worker(user_id: str):
+    """Background thread: waits for an RFID tag, then writes *user_id* to
+    block 4.  The U-prefix on user IDs lets the login scanner distinguish
+    user tags from tool tags."""
     _rfid_result["tag"]   = None
     _rfid_result["uid"]   = None
     _rfid_result["error"] = None
@@ -37,22 +43,28 @@ def _user_rfid_write_worker(user_id: str):
 
 @settings_bp.route("/settings/rfid/init", methods=["POST"])
 def settings_rfid_init():
+    """Allocate a user ID (reuse the existing one if already assigned) and
+    start a write job.  Returns the user_id so the UI can display it."""
     global _rfid_worker
     if "user" not in session:
         return jsonify({"success": False}), 401
 
     username = session["user"]
 
+    # Reuse the existing tag to avoid orphaning the old ID in the database
     existing_tag = database.get_user_rfid(username)
     if existing_tag:
         user_id = existing_tag
     else:
+        # Generate a collision-free ID and persist it immediately so concurrent
+        # requests can't race and assign the same ID to two users
         all_tags = database.get_all_user_rfid_tags()
-        user_id = pico_Reader.rand_User_ID()
+        user_id  = pico_Reader.rand_User_ID()
         while user_id in all_tags:
             user_id = pico_Reader.rand_User_ID()
         database.set_user_rfid(username, user_id)
 
+    # Cancel any in-progress write before starting a new one
     _rfid_stop.set()
     if _rfid_worker.is_alive():
         _rfid_worker.join(timeout=2)
@@ -65,6 +77,7 @@ def settings_rfid_init():
 
 @settings_bp.route("/settings/rfid/poll")
 def settings_rfid_poll():
+    """Poll the result of the current RFID write job."""
     if "user" not in session:
         return jsonify({"tag": None}), 401
     return jsonify({
@@ -76,6 +89,7 @@ def settings_rfid_poll():
 
 @settings_bp.route("/settings/user_rfid")
 def get_user_rfid():
+    """Return the current user's assigned RFID tag ID, or null if none."""
     if "user" not in session:
         return jsonify({"rfid_tag": None}), 401
     tag = database.get_user_rfid(session["user"])

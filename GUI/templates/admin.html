@@ -265,6 +265,11 @@
   }
   .btn-confirm-ok:hover { background: #f08888; }
 
+  /* ── LIVE BADGE (matches dashboard) ─────────────────────────── */
+  .live-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--green); }
+  .live-dot   { width: 7px; height: 7px; background: var(--green); border-radius: 50%; flex-shrink: 0; display: inline-block; animation: live-blink 2s ease infinite; }
+  @keyframes live-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
 </style>
 {% endblock %}
 
@@ -308,6 +313,20 @@
     </div>
   </div>
 
+  <!-- Connected Clients -->
+  <div class="admin-card" id="connections">
+    <div class="admin-card-header">
+      <span class="admin-card-title">Connected Clients</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="conn-count" style="font-size:12px;color:var(--muted);">—</span>
+        <div class="live-badge"><div class="live-dot"></div>Live</div>
+      </div>
+    </div>
+    <div class="admin-card-body" id="conn-body">
+      <p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">Loading…</p>
+    </div>
+  </div>
+
   <!-- Settings -->
   <div class="admin-card" id="settings">
     <div class="admin-card-header">
@@ -318,10 +337,17 @@
         <div class="settings-grid">
 
           <span class="settings-section-heading">RFID Reader</span>
-          <div class="settings-field full">
+          <div class="settings-field">
             <label class="settings-label">Serial Port</label>
             <input type="text" name="rfid_port" class="settings-input"
                    value="{{ settings.rfid.port }}" placeholder="/dev/ttyACM0">
+          </div>
+          <div class="settings-field">
+            <label class="settings-label">Allowed RFID Login IPs</label>
+            <textarea name="rfid_allowed_ips" class="settings-input" rows="3"
+                      placeholder="127.0.0.1&#10;::1"
+                      style="resize:vertical;font-family:monospace;font-size:13px;">{{ (settings.rfid.allowed_poll_ips or ['127.0.0.1', '::1']) | join('\n') }}</textarea>
+            <span style="font-size:11px;color:var(--muted);margin-top:2px;">One IP per line. Only these devices receive RFID login events.</span>
           </div>
 
           <hr class="settings-section-divider">
@@ -377,6 +403,55 @@
     </div>
   </div>
 
+
+  <!-- User RFID Tags -->
+  <div class="admin-card" id="user-rfid">
+    <div class="admin-card-header">
+      <span class="admin-card-title">User RFID Tags</span>
+    </div>
+    <div class="admin-card-body">
+
+      <!-- Scan status (shown while a scan is in progress) -->
+      <div id="ua-status-row" style="display:none;align-items:center;gap:10px;margin-bottom:20px;">
+        <div class="rfid-dot scanning"></div>
+        <span id="ua-status-text" style="font-size:13px;color:var(--muted);">Waiting for tag…</span>
+        <button class="settings-btn" onclick="uaCancel()" style="margin-left:auto;background:rgba(237,118,118,0.12);color:var(--accent);border-color:rgba(237,118,118,0.25);">Cancel</button>
+      </div>
+
+      <!-- User list -->
+      {% if users %}
+      <div class="checkout-row-head" style="display:grid;grid-template-columns:1.2fr 1fr 90px 110px;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:2px;">
+        <span>Name</span><span>RFID Tag</span><span></span><span></span>
+      </div>
+      {% for u in users %}
+      <div class="checkout-row" style="grid-template-columns:1.2fr 1fr 90px 110px;">
+        <span class="checkout-tool-name">
+          {{ u.name }}
+          {% if u.is_admin %}<span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:4px;">ADMIN</span>{% endif %}
+        </span>
+        <span class="checkout-time" style="font-family:monospace;">{{ u.rfid_tag if u.rfid_tag else '—' }}</span>
+        <button class="btn-return" onclick="uaStart('{{ u.name }}')">Assign Tag</button>
+        {% if u.name == session.get('user') %}
+          <button class="btn-return" disabled style="opacity:0.35;cursor:not-allowed;" title="Cannot change your own admin status">
+            {{ 'Revoke Admin' if u.is_admin else 'Grant Admin' }}
+          </button>
+        {% elif not u.rfid_tag and not u.is_admin %}
+          <button class="btn-return" disabled style="opacity:0.35;cursor:not-allowed;" title="User must have an RFID tag before being granted admin access">Grant Admin</button>
+        {% else %}
+          <button class="btn-return" onclick="setAdmin('{{ u.name }}', {{ 'false' if u.is_admin else 'true' }})"
+                  style="{{ 'color:var(--accent);border-color:rgba(237,118,118,0.4);' if u.is_admin else '' }}">
+            {{ 'Revoke Admin' if u.is_admin else 'Grant Admin' }}
+          </button>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% else %}
+      <p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">No users registered yet.</p>
+      {% endif %}
+
+    </div>
+  </div>
+
   <!-- Danger Zone -->
   <div class="admin-card danger">
     <div class="admin-card-header">
@@ -421,5 +496,100 @@ function closeConfirm() {
 function closeConfirmOutside(e) {
   if (e.target === document.getElementById('confirm-modal')) closeConfirm();
 }
+
+/* ── User RFID assignment ─────────────────────────────────────── */
+let _uaPollTimer = null;
+
+function uaStart(username) {
+  fetch('/admin/user_rfid/assign', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) { showToast(d.error || 'Failed to start', 'error'); return; }
+    document.getElementById('ua-status-row').style.display = 'flex';
+    document.getElementById('ua-status-text').textContent = 'Tap RFID tag for ' + username + '…';
+    _uaPollTimer = setInterval(_uaPoll, 600);
+  });
+}
+
+function _uaPoll() {
+  fetch('/admin/user_rfid/poll')
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { uaReset(); showToast(d.error, 'error'); }
+      else if (d.done) { uaReset(); showToast('RFID tag assigned'); setTimeout(() => location.reload(), 800); }
+    });
+}
+
+function uaCancel() {
+  fetch('/admin/user_rfid/cancel', {method: 'POST'});
+  uaReset();
+}
+
+function uaReset() {
+  clearInterval(_uaPollTimer);
+  document.getElementById('ua-status-row').style.display = 'none';
+}
+
+/* ── Admin grant / revoke ─────────────────────────────────────── */
+function setAdmin(username, grant) {
+  fetch('/admin/set_admin', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username, grant})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) showToast(d.error || 'Failed', 'error');
+    else { showToast(grant ? username + ' granted admin access' : username + ' admin access revoked'); setTimeout(() => location.reload(), 800); }
+  });
+}
+
+/* ── Live connected clients ───────────────────────────────────── */
+const _currentIp = {{ current_ip | tojson }};
+
+function _renderConnections(data) {
+  const count = document.getElementById('conn-count');
+  const body  = document.getElementById('conn-body');
+  count.textContent = data.length + ' client' + (data.length !== 1 ? 's' : '');
+  if (!data.length) {
+    body.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">No connections recorded yet.</p>';
+    return;
+  }
+  const now = Date.now();
+  const rows = data.map(c => {
+    const isLive = c.last_seen && (now - new Date(c.last_seen).getTime()) < 60000;
+    const dot    = isLive ? '<span class="live-dot"></span>' : '<span style="display:inline-block;width:8px;height:8px;"></span>';
+    const isYou  = c.ip === _currentIp;
+    const youTag = isYou ? ' <span class="admin-badge" style="background:rgba(91,158,255,0.12);color:var(--blue);border-color:rgba(91,158,255,0.25);vertical-align:middle;">You</span>' : '';
+    const badge  = c.is_private === 'LAN'
+      ? '<span class="admin-badge">LAN</span>'
+      : '<span class="admin-badge" style="background:rgba(74,222,128,0.12);color:var(--green);border-color:rgba(74,222,128,0.25);">WAN</span>';
+    const seen   = c.last_seen ? c.last_seen.slice(0,16).replace('T',' ') : '—';
+    return `<div class="checkout-row" style="grid-template-columns:18px 1.3fr 1fr 1fr 56px;gap:10px;align-items:center;">
+      ${dot}
+      <span class="checkout-tool-name" style="font-family:monospace;font-size:13px;">${c.ip}${youTag}</span>
+      <span class="checkout-time">${c.user || '<span style="color:var(--border2);">—</span>'}</span>
+      <span class="checkout-time">${seen}</span>
+      ${badge}
+    </div>`;
+  }).join('');
+  body.innerHTML =
+    `<div class="checkout-row-head" style="display:grid;grid-template-columns:18px 1.3fr 1fr 1fr 56px;gap:10px;">
+      <span></span><span>IP Address</span><span>User</span><span>Last seen</span><span></span>
+    </div>` + rows;
+}
+
+function _refreshConnections() {
+  fetch('/admin/connections')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(_renderConnections)
+    .catch(() => {});
+}
+_refreshConnections();
+setInterval(_refreshConnections, 4000);
 </script>
 {% endblock %}
