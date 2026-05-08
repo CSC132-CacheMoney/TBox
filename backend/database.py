@@ -1,10 +1,11 @@
 import os
 import sqlite3
 from datetime import datetime
+from pathlib import Path
 import pico_Reader
 
-
-DB_PATH = "data/tools.db"
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "data" / "tools.db"
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -15,7 +16,7 @@ def get_connection():
 # ── INITIALIZATION ────────────────────────────────────────────────────────────
 
 def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True) # Ensure the data directory exists
+    os.makedirs(DB_PATH.parent, exist_ok=True)  # Ensure the data directory exists
     """Create all tables if they don't exist. Run once on startup."""
     conn = get_connection()
     c = conn.cursor()
@@ -24,6 +25,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS tools (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             name        TEXT NOT NULL,
+            brand       TEXT DEFAULT '',
             rfid_tag    TEXT NOT NULL UNIQUE,
             category    TEXT,
             condition   TEXT DEFAULT 'Good',
@@ -43,7 +45,9 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             name        TEXT NOT NULL UNIQUE,
-            last_seen   TEXT
+            last_seen   TEXT,
+            rfid_tag    TEXT UNIQUE,
+            is_admin    INTEGER DEFAULT 0
         );
 
         CREATE TABLE IF NOT EXISTS config (
@@ -60,17 +64,47 @@ def init_db():
     """)
 
     conn.commit()
+
+    # Migrate existing databases: add brand column if absent
+    try:
+        c.execute("ALTER TABLE tools ADD COLUMN brand TEXT DEFAULT ''")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
+    # Migrate existing databases: add rfid_tag column to users if absent
+    # Note: SQLite ALTER TABLE ADD COLUMN does not support UNIQUE — uniqueness
+    # is enforced at the application level via get_all_user_rfid_tags().
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN rfid_tag TEXT")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
     conn.close()
 
 
 # ── TOOLS ─────────────────────────────────────────────────────────────────────
-def register_tool(name, rfid_tag=pico_Reader.rand_Tool_ID(), category="General", condition="Good"):
+
+def display_name(tool) -> str:
+    """Return 'Name (Brand)' if brand is set, otherwise just 'Name'."""
+    brand = (tool.get("brand") or "").strip()
+    return f"{tool['name']} ({brand})" if brand else tool["name"]
+
+
+def register_tool(name, rfid_tag=pico_Reader.rand_Tool_ID(), category="General", condition="Good", brand=""):
     conn = get_connection()
     try:
         conn.execute("""
-            INSERT INTO tools (name, rfid_tag, category, condition, status, added_on)
-            VALUES (?, ?, ?, ?, 'Available', ?)
-        """, (name, rfid_tag, category, condition, datetime.now().isoformat()))
+            INSERT INTO tools (name, brand, rfid_tag, category, condition, status, added_on)
+            VALUES (?, ?, ?, ?, ?, 'Available', ?)
+        """, (name, brand.strip(), rfid_tag, category, condition, datetime.now().isoformat()))
         conn.commit()
     except sqlite3.IntegrityError:
         raise ValueError(f"A tool with RFID tag '{rfid_tag}' already exists.")
@@ -99,14 +133,10 @@ def get_tool_by_id(tool_id):
     return tool
 
 def valid_tool_id(tool_id):
-    conn = get_connection()
     try:
-        get_tool_by_rfid(tool_id)
-        return True
-    except:
+        return get_tool_by_rfid(tool_id) is not None
+    except Exception:
         return False
-    finally:
-        conn.close
  
 def get_tool_by_rfid(rfid_tag):
     conn = get_connection()
@@ -207,6 +237,87 @@ def log_user(name):
     """, (name, datetime.now().isoformat()))
     conn.commit()
     conn.close()
+
+
+def get_all_users():
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT name, rfid_tag, is_admin, last_seen FROM users ORDER BY name"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_user_by_rfid(rfid_tag):
+    conn = get_connection()
+    user = conn.execute("SELECT * FROM users WHERE rfid_tag = ?", (rfid_tag,)).fetchone()
+    conn.close()
+    return user
+
+
+def get_user_rfid(name):
+    conn = get_connection()
+    row = conn.execute("SELECT rfid_tag FROM users WHERE name = ?", (name,)).fetchone()
+    conn.close()
+    return row["rfid_tag"] if row else None
+
+
+def set_user_rfid(name, rfid_tag):
+    conn = get_connection()
+    conn.execute("""
+        INSERT INTO users (name, rfid_tag, last_seen) VALUES (?, ?, ?)
+        ON CONFLICT(name) DO UPDATE SET rfid_tag = excluded.rfid_tag
+    """, (name, rfid_tag, datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+
+
+def get_all_user_rfid_tags():
+    conn = get_connection()
+    rows = conn.execute("SELECT rfid_tag FROM users WHERE rfid_tag IS NOT NULL").fetchall()
+    conn.close()
+    return {row["rfid_tag"] for row in rows}
+
+
+def is_user_admin(name):
+    conn = get_connection()
+    row = conn.execute("SELECT is_admin FROM users WHERE name = ?", (name,)).fetchone()
+    conn.close()
+    return bool(row and row["is_admin"])
+
+
+def set_admin(name, value: bool):
+    conn = get_connection()
+    conn.execute("UPDATE users SET is_admin = ? WHERE name = ?", (1 if value else 0, name))
+    conn.commit()
+    conn.close()
+
+
+def get_checked_out_tools():
+    conn = get_connection()
+    rows = conn.execute("""
+        SELECT t.id, t.name, t.brand, t.rfid_tag,
+               c.user_name, c.checked_out_at
+        FROM tools t
+        JOIN checkouts c ON t.id = c.tool_id
+        WHERE t.status = 'Checked Out' AND c.returned_at IS NULL
+        ORDER BY c.checked_out_at ASC
+    """).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def reset_database():
+    conn = get_connection()
+    conn.executescript("""
+        DELETE FROM checkouts;
+        DELETE FROM tools;
+        DELETE FROM users;
+        DELETE FROM config;
+    """)
+    conn.commit()
+    conn.close()
+    init_db()
  
  
 # ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -228,6 +339,155 @@ def set_config(key, value):
     conn.close()
  
  
+# ── DASHBOARD ─────────────────────────────────────────────────────────────────
+
+def get_dashboard_stats():
+    conn = get_connection()
+    row = conn.execute("""
+        SELECT
+            SUM(CASE WHEN status = 'Available'   THEN 1 ELSE 0 END) AS available,
+            SUM(CASE WHEN status = 'Checked Out' THEN 1 ELSE 0 END) AS checked_out,
+            SUM(CASE WHEN status = 'Retired'     THEN 1 ELSE 0 END) AS retired,
+            SUM(CASE WHEN status != 'Retired'    THEN 1 ELSE 0 END) AS active
+        FROM tools
+    """).fetchone()
+    conn.close()
+    return {k: (row[k] or 0) for k in row.keys()}
+
+
+def get_longest_checkout():
+    conn = get_connection()
+    row = conn.execute("""
+        SELECT c.user_name,
+               CASE WHEN t.brand != '' AND t.brand IS NOT NULL
+                    THEN t.name || ' (' || t.brand || ')'
+                    ELSE t.name END AS tool_name,
+               c.checked_out_at
+        FROM checkouts c
+        JOIN tools t ON c.tool_id = t.id
+        WHERE c.returned_at IS NULL
+        ORDER BY c.checked_out_at ASC
+        LIMIT 1
+    """).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_weekly_checkouts():
+    from datetime import date, timedelta
+    conn = get_connection()
+    rows = conn.execute("""
+        SELECT DATE(checked_out_at) AS day, COUNT(*) AS count
+        FROM checkouts
+        WHERE DATE(checked_out_at) >= DATE('now', '-6 days')
+        GROUP BY DATE(checked_out_at)
+    """).fetchall()
+    conn.close()
+    day_map = {r["day"]: r["count"] for r in rows}
+    today = date.today()
+    return [
+        {"day": (today - timedelta(days=i)).isoformat(),
+         "count": day_map.get((today - timedelta(days=i)).isoformat(), 0)}
+        for i in range(6, -1, -1)
+    ]
+
+
+def get_recent_activity(since=None, limit=25):
+    conn = get_connection()
+    if since:
+        rows = conn.execute("""
+            SELECT 'checkout' AS type, c.user_name,
+                   CASE WHEN t.brand != '' AND t.brand IS NOT NULL
+                        THEN t.name || ' (' || t.brand || ')' ELSE t.name END AS tool_name,
+                   c.checked_out_at AS event_time
+            FROM checkouts c JOIN tools t ON c.tool_id = t.id
+            WHERE c.checked_out_at > ?
+
+            UNION ALL
+
+            SELECT 'return' AS type, c.user_name,
+                   CASE WHEN t.brand != '' AND t.brand IS NOT NULL
+                        THEN t.name || ' (' || t.brand || ')' ELSE t.name END AS tool_name,
+                   c.returned_at AS event_time
+            FROM checkouts c JOIN tools t ON c.tool_id = t.id
+            WHERE c.returned_at IS NOT NULL AND c.returned_at > ?
+
+            UNION ALL
+
+            SELECT 'login' AS type, u.name AS user_name, NULL AS tool_name,
+                   u.last_seen AS event_time
+            FROM users u WHERE u.last_seen > ?
+
+            ORDER BY event_time DESC LIMIT ?
+        """, (since, since, since, limit)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT 'checkout' AS type, c.user_name,
+                   CASE WHEN t.brand != '' AND t.brand IS NOT NULL
+                        THEN t.name || ' (' || t.brand || ')' ELSE t.name END AS tool_name,
+                   c.checked_out_at AS event_time
+            FROM checkouts c JOIN tools t ON c.tool_id = t.id
+
+            UNION ALL
+
+            SELECT 'return' AS type, c.user_name,
+                   CASE WHEN t.brand != '' AND t.brand IS NOT NULL
+                        THEN t.name || ' (' || t.brand || ')' ELSE t.name END AS tool_name,
+                   c.returned_at AS event_time
+            FROM checkouts c JOIN tools t ON c.tool_id = t.id
+            WHERE c.returned_at IS NOT NULL
+
+            UNION ALL
+
+            SELECT 'login' AS type, u.name AS user_name, NULL AS tool_name,
+                   u.last_seen AS event_time
+            FROM users u WHERE u.last_seen IS NOT NULL
+
+            ORDER BY event_time DESC LIMIT ?
+        """, (limit,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_user_summary(username):
+    conn = get_connection()
+    stats = conn.execute("""
+        SELECT
+            COUNT(*) AS total_checkouts,
+            COALESCE(SUM(CASE WHEN returned_at IS NULL THEN 1 ELSE 0 END), 0) AS currently_out,
+            COUNT(DISTINCT tool_id) AS unique_tools,
+            AVG(CASE WHEN returned_at IS NOT NULL
+                THEN (julianday(returned_at) - julianday(checked_out_at)) * 24
+                ELSE NULL END) AS avg_hours
+        FROM checkouts WHERE user_name = ?
+    """, (username,)).fetchone()
+    current = conn.execute("""
+        SELECT t.name, t.brand, t.category, c.checked_out_at
+        FROM checkouts c JOIN tools t ON c.tool_id = t.id
+        WHERE c.user_name = ? AND c.returned_at IS NULL
+        ORDER BY c.checked_out_at ASC
+    """, (username,)).fetchall()
+    history = conn.execute("""
+        SELECT t.name, t.brand, t.category, c.checked_out_at, c.returned_at
+        FROM checkouts c JOIN tools t ON c.tool_id = t.id
+        WHERE c.user_name = ?
+        ORDER BY c.checked_out_at DESC LIMIT 30
+    """, (username,)).fetchall()
+    top_tools = conn.execute("""
+        SELECT t.name, t.brand, COUNT(*) AS uses
+        FROM checkouts c JOIN tools t ON c.tool_id = t.id
+        WHERE c.user_name = ?
+        GROUP BY c.tool_id ORDER BY uses DESC LIMIT 5
+    """, (username,)).fetchall()
+    conn.close()
+    return {
+        "stats": dict(stats),
+        "current": [dict(r) for r in current],
+        "history": [dict(r) for r in history],
+        "top_tools": [dict(r) for r in top_tools],
+    }
+
+
 if __name__ == "__main__":
     init_db()
     print("Database initialized.")
