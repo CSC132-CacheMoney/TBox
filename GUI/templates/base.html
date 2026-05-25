@@ -444,6 +444,7 @@ function showToast(msg, type = 'success') {
   clearTimeout(_toastTimer);
   t.classList.add('show');
   _toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+  playSound("sfx_interface");
 }
 
 function openSettings() {
@@ -565,6 +566,26 @@ function unlockAdmin() {
     });
 }
 </script>
+<!-- Audio -->
+<audio id="sfx_interface" src="{{ url_for('static', filename = 'assets/sound_interface.wav') }}">Audio (.wav) is not supported in your browser.</audio>   <!-- Interface SFX                  -->
+<audio id="sfx_startup" src="{{ url_for('static', filename = 'assets/sound_interface.wav') }}">Audio (.wav) is not supported in your browser. </audio>    <!-- Startup/Login to dashboard SFX -->
+<script>
+  function playSound(name)
+  {
+    try
+    {
+      const audio = document.getElementById(name);
+      if (audio instanceof HTMLAudioElement)
+      {
+        audio.currentTime = 0;
+        audio.play();
+      }
+    }
+    catch (e)
+    {}
+  }
+</script>
+<!-- End Audio -->
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>
