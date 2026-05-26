@@ -566,16 +566,20 @@ function unlockAdmin() {
     });
 }
 </script>
-<!-- Audio -->
-<audio id="sfx_interface" src="{{ url_for('static', filename = 'assets/sound_interface.wav') }}">Audio (.wav) is not supported in your browser.</audio>   <!-- Interface SFX                  -->
-<audio id="sfx_startup" src="{{ url_for('static', filename = 'assets/sound_interface.wav') }}">Audio (.wav) is not supported in your browser. </audio>    <!-- Startup/Login to dashboard SFX -->
+<!--
+    Audio portion of ToolVault
+    Loki - below are HTML audio tags for all sounds in the ToolVault
+    browser plus a JS function for playing sounds.
+-->
+<audio id="sfx_interface" src="{{ url_for('static', filename = 'assets/sound_interface.wav') }}">Audio (.wav) is not supported on your browser.</audio>   <!-- Interface SFX -->
+<audio id="sfx_startup" src="{{ url_for('static', filename = 'assets/sound_startup.wav') }}">Audio (.wav) is not supported on your browser. </audio>    <!-- Startup/Login to dashboard SFX -->
 <script>
   function playSound(name)
   {
     try
     {
       const audio = document.getElementById(name);
-      if (audio instanceof HTMLAudioElement)
+      if (audio != null && audio instanceof HTMLAudioElement)
       {
         audio.currentTime = 0;
         audio.play();
@@ -585,7 +589,7 @@ function unlockAdmin() {
     {}
   }
 </script>
-<!-- End Audio -->
+<!-- End audio portion -->
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>
