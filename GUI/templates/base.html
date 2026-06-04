@@ -444,7 +444,7 @@ function showToast(msg, type = 'success') {
   clearTimeout(_toastTimer);
   t.classList.add('show');
   _toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
-  playSound("interface");
+  playSound(type === 'success' ? "positive_A" : "negative");
 }
 
 function openSettings() {
@@ -568,8 +568,9 @@ function unlockAdmin() {
 </script>
 <!-- Audio -->
 <!-- Add .wav files here as formatted. -->
-<audio id="sfx_interface" src="{{ url_for('static', filename = 'assets/sound_interface.wav') }}" preload="auto">Your browser does not support this audio (.wav).</audio>
-<audio id="sfx_startup" src="{{ url_for('static', filename = 'assets/sound_startup.wav') }}" preload="auto">Your browser does not support this audio (.wav).</audio>
+<audio id="sfx_positive_A" src="{{ url_for('static', filename = 'assets/sound_positive_A.wav') }}" preload="auto">Your browser does not support this audio (.wav).</audio>
+<audio id="sfx_positive_B" src="{{ url_for('static', filename = 'assets/sound_positive_B.wav') }}" preload="auto">Your browser does not support this audio (.wav).</audio>
+<audio id="sfx_negative" src="{{ url_for('static', filename = 'assets/sound_negative.wav') }}" preload="auto">Your browser does not support this audio (.wav).</audio>
 <script>
   function playSound(name)
   {
