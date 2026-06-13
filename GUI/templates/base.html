@@ -572,14 +572,10 @@ function unlockAdmin() {
 <audio id="sfx_positive_B" src="{{ url_for('static', filename = 'assets/sound_positive_B.wav') }}" preload="auto">Your browser does not support this audio (.wav).</audio>
 <audio id="sfx_negative" src="{{ url_for('static', filename = 'assets/sound_negative.wav') }}" preload="auto">Your browser does not support this audio (.wav).</audio>
 <script>
-  function playSound(name)
-  {
-    const audio = document.querySelector(`audio[id='sfx_${name}']`);
-    if (audio instanceof HTMLAudioElement)
-    {
-      audio.currentTime = 0;
-      audio.play();
-    }
+  function playSound(name) {
+    const audio = document.querySelector(`audio#sfx_${name}`); if (!(audio instanceof HTMLAudioElement)) {return;}
+    audio.currentTime = 0;
+    audio.play();
   }
 </script>
 <!-- End audio -->
